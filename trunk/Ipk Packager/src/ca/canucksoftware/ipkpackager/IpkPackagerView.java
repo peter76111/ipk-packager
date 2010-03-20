@@ -46,6 +46,7 @@ public class IpkPackagerView extends FrameView {
         depends = new ArrayList<String>();
         ssURLs = new ArrayList<String>();
         t = new Timer();
+        t.schedule(new ResizeScreen(), 50);
         t.schedule(new DelayedLoad(), 50);
     }
 
@@ -998,13 +999,16 @@ public class IpkPackagerView extends FrameView {
     private javax.swing.JPanel mainPanel;
     // End of variables declaration//GEN-END:variables
 
+    private class ResizeScreen extends TimerTask {
+        public void run() {
+            jButton2.setText("⇒");
+            getFrame().setSize(getFrame().getWidth()-437, getFrame().getHeight());
+        }
+    }
+
     private class DelayedLoad extends TimerTask {
         public void run() {
             jLayeredPane1.requestFocus();
-            if(!isExpanded && getFrame().getWidth()!=356) {
-                jButton2.setText("⇒");
-                getFrame().setSize(getFrame().getWidth()-437, getFrame().getHeight());
-            }
         }
     }
 
