@@ -1,0 +1,1024 @@
+/*
+ * IpkPackagerView.java
+ */
+
+package ca.canucksoftware.ipkpackager;
+
+import ca.canucksoftware.ipk.IpkgBuilder;
+import java.awt.Component;
+import java.awt.Container;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.prefs.Preferences;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.UIManager;
+import javax.swing.filechooser.FileFilter;
+import org.jdesktop.application.SingleFrameApplication;
+import org.jdesktop.application.FrameView;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/**
+ * The application's main frame.
+ */
+public class IpkPackagerView extends FrameView {
+    private boolean isExpanded;
+    private File folder;
+    private File postinst;
+    private File prerm;
+    private Timer t;
+    private ArrayList<String> depends;
+    private ArrayList<String> ssURLs;
+
+    public IpkPackagerView(SingleFrameApplication app) {
+        super(app);
+        initComponents();
+        folder=null;
+        isExpanded = false;
+        depends = new ArrayList<String>();
+        ssURLs = new ArrayList<String>();
+        t = new Timer();
+        t.schedule(new DelayedLoad(), 50);
+    }
+
+    private File loadFileChooser(boolean dir, FileFilter filter, String text) {
+        File result = null;
+        JFileChooser fc = new JFileChooser(); //Create a file chooser
+        disableNewFolderButton(fc);
+        if(text!=null) {
+            fc.setSelectedFile(new File(text));
+        }
+        if(dir) {
+            fc.setDialogTitle("");
+            File lastDir = new File(Preferences.userRoot().get("lastDir",
+                        fc.getCurrentDirectory().getAbsolutePath()));
+            fc.setCurrentDirectory(lastDir);
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (fc.showDialog(null, "Select") == JFileChooser.APPROVE_OPTION) {
+                result = fc.getSelectedFile();
+                jTextField1.setText(result.getAbsolutePath());
+                Preferences.userRoot().put("lastDir",
+                            result.getParentFile().getAbsolutePath());
+            }
+        } else {
+            File lastSaved = null;
+            File lastSelected = null;
+            if(filter!=null) {
+                fc.setDialogTitle("Save As...");
+                lastSaved = new File(Preferences.userRoot().get("lastSaved",
+                        fc.getCurrentDirectory().getAbsolutePath()));
+                fc.setCurrentDirectory(lastSaved);
+                fc.setFileFilter(filter);
+            } else {
+                fc.setDialogTitle("");
+                lastSelected = new File(Preferences.userRoot().get("lastSelected",
+                        fc.getCurrentDirectory().getAbsolutePath()));
+                fc.setCurrentDirectory(lastSelected);
+                fc.setAcceptAllFileFilterUsed(true);
+            }
+            if(fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                result = fc.getSelectedFile();
+                if(lastSaved!=null) {
+                    Preferences.userRoot().put("lastSaved",
+                            result.getParentFile().getAbsolutePath());
+                }
+                if(lastSelected!=null) {
+                    Preferences.userRoot().put("lastSelected",
+                            result.getParentFile().getAbsolutePath());
+                }
+            }
+        }
+        return result;
+    }
+
+    private void disableNewFolderButton(Container c) {
+        int len = c.getComponentCount();
+        for(int i=0; i<len; i++) {
+            Component comp = c.getComponent(i);
+            if(comp instanceof JButton) {
+                JButton b = (JButton)comp;
+                Icon icon = b.getIcon();
+                if(icon != null && (icon == UIManager.getIcon("FileChooser.newFolderIcon")
+                        || icon == UIManager.getIcon("FileChooser.upFolderIcon")))
+                    b.setEnabled(false);
+            } else if (comp instanceof Container) {
+                disableNewFolderButton((Container)comp);
+            }
+        }
+    }
+
+    private boolean okToGo() {
+        return ((folder!=null) && (jTextField2.getText().length()!=0) &&
+                (jTextField3.getText().length()!=0) &&
+                (jTextField5.getText().length()!=0) &&
+                (jTextField7.getText().length()!=0) &&
+                (jTextField6.getText().length()!=0));
+    }
+
+    private String getFilepath() {
+        String result = null;
+        result = jTextField2.getText().replace("\\", "/");
+        if(!result.startsWith("/"))
+            result = "/" + result;
+        if(!result.endsWith("/"))
+            result = result + "/";
+        return result;
+    }
+
+    private String getArch() {
+        String result = "all";
+        if(jComboBox5.getSelectedIndex()==1) {
+            result = "armv6";
+        } else if(jComboBox5.getSelectedIndex()==2) {
+            result = "armv7";
+        } else if(jComboBox5.getSelectedIndex()==3) {
+            result = "i686";
+        }
+        return result;
+    }
+
+    private String getType() {
+        String result = "Application";
+        if(jComboBox1.getSelectedIndex()==1) {
+            result = "Linux Application";
+        } else if(jComboBox1.getSelectedIndex()==2) {
+            result = "Linux Daemon";
+        } else if(jComboBox1.getSelectedIndex()==3) {
+            result = "Patch";
+        } else if(jComboBox1.getSelectedIndex()==3) {
+            result = "Plugin";
+        } else if(jComboBox1.getSelectedIndex()==3) {
+            result = "Service";
+        } else if(jComboBox1.getSelectedIndex()==3) {
+            result = "Theme";
+        }
+        return result;
+    }
+
+    private String getFlag(javax.swing.JComboBox comboBox) {
+        String result = null;
+        if(comboBox.getSelectedIndex()==1) {
+            result = "RestartJava";
+        } else if(comboBox.getSelectedIndex()==2) {
+            result = "RestartLuna";
+        } else if(comboBox.getSelectedIndex()==3) {
+            result = "RestartDevice ";
+        }
+        return result;
+    }
+
+    private String readFile(File f) throws IOException {
+        String out = "";
+        String line = null;
+        BufferedReader br = new BufferedReader(new FileReader(f));
+        line = br.readLine();
+        while(line!=null) {
+            out += line.trim();
+            line = br.readLine();
+            if(line!=null) {
+                out += " ";
+            }
+        }
+        br.close();
+        return out;
+    }
+
+    private void loadFromJSON(File json) {
+        try {
+            String s = readFile(json);
+            if(s.trim().length()!=0) {
+                JSONObject jsonO = new JSONObject(s);
+                if(jsonO.has("title")) {
+                    jTextField3.setText(jsonO.getString("title"));
+                }
+                if(jsonO.has("id")) {
+                    jTextField5.setText(jsonO.getString("id"));
+                    jTextField2.setText("/usr/palm/applications/" +
+                            jTextField5.getText() + "/");
+                    jTextField2.setCaretPosition(0);
+                }
+                if(jsonO.has("version")) {
+                    jTextField6.setText(jsonO.getString("version"));
+                }
+                if(jsonO.has("vendor")) {
+                    jTextField7.setText(jsonO.getString("vendor"));
+                }
+            }
+        } catch(Exception e) {}
+    }
+
+    /** This method is called from within the constructor to
+     * initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is
+     * always regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        mainPanel = new javax.swing.JPanel();
+        jLayeredPane1 = new javax.swing.JLayeredPane();
+        jLayeredPane2 = new javax.swing.JLayeredPane();
+        jTextField5 = new javax.swing.JTextField();
+        jComboBox5 = new javax.swing.JComboBox();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        jTextField3 = new javax.swing.JTextField();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jTextField6 = new javax.swing.JTextField();
+        jLabel21 = new javax.swing.JLabel();
+        jTextField7 = new javax.swing.JTextField();
+        jLayeredPane3 = new javax.swing.JLayeredPane();
+        jTextField10 = new javax.swing.JTextField();
+        jLabel10 = new javax.swing.JLabel();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel13 = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jList1 = new javax.swing.JList();
+        jComboBox3 = new javax.swing.JComboBox();
+        jButton4 = new javax.swing.JButton();
+        jTextField12 = new javax.swing.JTextField();
+        jLabel17 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        jTextField11 = new javax.swing.JTextField();
+        jLabel8 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        jComboBox4 = new javax.swing.JComboBox();
+        jComboBox1 = new javax.swing.JComboBox();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTextArea2 = new javax.swing.JTextArea();
+        jButton5 = new javax.swing.JButton();
+        jTextField9 = new javax.swing.JTextField();
+        jComboBox2 = new javax.swing.JComboBox();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel18 = new javax.swing.JLabel();
+        jLabel12 = new javax.swing.JLabel();
+        jTextField4 = new javax.swing.JTextField();
+        jLabel16 = new javax.swing.JLabel();
+        jLayeredPane4 = new javax.swing.JLayeredPane();
+        jButton7 = new javax.swing.JButton();
+        jLabel19 = new javax.swing.JLabel();
+        jButton6 = new javax.swing.JButton();
+        jTextField13 = new javax.swing.JTextField();
+        jButton9 = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        jList2 = new javax.swing.JList();
+        jTextField14 = new javax.swing.JTextField();
+        jButton10 = new javax.swing.JButton();
+        jLabel20 = new javax.swing.JLabel();
+        jTextField1 = new javax.swing.JTextField();
+        jLabel2 = new javax.swing.JLabel();
+        jTextField2 = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        jButton3 = new javax.swing.JButton();
+        jButton2 = new javax.swing.JButton();
+        jTextField8 = new javax.swing.JTextField();
+        jButton8 = new javax.swing.JButton();
+        jButton1 = new javax.swing.JButton();
+
+        mainPanel.setName("mainPanel"); // NOI18N
+
+        jLayeredPane1.setName("jLayeredPane1"); // NOI18N
+
+        org.jdesktop.application.ResourceMap resourceMap = org.jdesktop.application.Application.getInstance(ca.canucksoftware.ipkpackager.IpkPackagerApp.class).getContext().getResourceMap(IpkPackagerView.class);
+        jLayeredPane2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane2.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane2.border.titleFont"))); // NOI18N
+        jLayeredPane2.setName("jLayeredPane2"); // NOI18N
+
+        jTextField5.setText(resourceMap.getString("jTextField5.text")); // NOI18N
+        jTextField5.setName("jTextField5"); // NOI18N
+        jTextField5.setBounds(90, 50, 220, 20);
+        jLayeredPane2.add(jTextField5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox5.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "all", "armv6  (Palm Pixi/Pixi Plus)", "armv7  (Palm Pre/Pre Plus)", "i686  (emulator)" }));
+        jComboBox5.setName("jComboBox5"); // NOI18N
+        jComboBox5.setBounds(90, 140, 220, 20);
+        jLayeredPane2.add(jComboBox5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel6.setText(resourceMap.getString("jLabel6.text")); // NOI18N
+        jLabel6.setName("jLabel6"); // NOI18N
+        jLabel6.setBounds(20, 80, 70, 20);
+        jLayeredPane2.add(jLabel6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel4.setText(resourceMap.getString("jLabel4.text")); // NOI18N
+        jLabel4.setName("jLabel4"); // NOI18N
+        jLabel4.setBounds(20, 20, 70, 20);
+        jLayeredPane2.add(jLabel4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField3.setText(resourceMap.getString("jTextField3.text")); // NOI18N
+        jTextField3.setName("jTextField3"); // NOI18N
+        jTextField3.setBounds(90, 20, 220, 20);
+        jLayeredPane2.add(jTextField3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel1.setText(resourceMap.getString("jLabel1.text")); // NOI18N
+        jLabel1.setName("jLabel1"); // NOI18N
+        jLabel1.setBounds(20, 110, 70, 20);
+        jLayeredPane2.add(jLabel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel5.setText(resourceMap.getString("jLabel5.text")); // NOI18N
+        jLabel5.setName("jLabel5"); // NOI18N
+        jLabel5.setBounds(20, 50, 70, 20);
+        jLayeredPane2.add(jLabel5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField6.setText(resourceMap.getString("jTextField6.text")); // NOI18N
+        jTextField6.setName("jTextField6"); // NOI18N
+        jTextField6.setBounds(90, 80, 220, 20);
+        jLayeredPane2.add(jTextField6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel21.setText(resourceMap.getString("jLabel21.text")); // NOI18N
+        jLabel21.setName("jLabel21"); // NOI18N
+        jLabel21.setBounds(20, 140, 70, 20);
+        jLayeredPane2.add(jLabel21, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField7.setText(resourceMap.getString("jTextField7.text")); // NOI18N
+        jTextField7.setName("jTextField7"); // NOI18N
+        jTextField7.setBounds(90, 110, 220, 20);
+        jLayeredPane2.add(jTextField7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane2.setBounds(10, 90, 330, 170);
+        jLayeredPane1.add(jLayeredPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane3.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane3.border.titleFont"))); // NOI18N
+        jLayeredPane3.setName("jLayeredPane3"); // NOI18N
+
+        jTextField10.setText(resourceMap.getString("jTextField10.text")); // NOI18N
+        jTextField10.setName("jTextField10"); // NOI18N
+        jTextField10.setBounds(280, 270, 120, 20);
+        jLayeredPane3.add(jTextField10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel10.setText(resourceMap.getString("jLabel10.text")); // NOI18N
+        jLabel10.setName("jLabel10"); // NOI18N
+        jLabel10.setBounds(20, 120, 80, 20);
+        jLayeredPane3.add(jLabel10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel14.setText(resourceMap.getString("jLabel14.text")); // NOI18N
+        jLabel14.setName("jLabel14"); // NOI18N
+        jLabel14.setBounds(20, 270, 60, 20);
+        jLayeredPane3.add(jLabel14, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel13.setText(resourceMap.getString("jLabel13.text")); // NOI18N
+        jLabel13.setName("jLabel13"); // NOI18N
+        jLabel13.setBounds(210, 240, 70, 20);
+        jLayeredPane3.add(jLabel13, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jScrollPane2.setName("jScrollPane2"); // NOI18N
+
+        jList1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jList1.setName("jList1"); // NOI18N
+        jList1.setVisibleRowCount(3);
+        jScrollPane2.setViewportView(jList1);
+
+        jScrollPane2.setBounds(100, 60, 260, 50);
+        jLayeredPane3.add(jScrollPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox3.setName("jComboBox3"); // NOI18N
+        jComboBox3.setBounds(280, 305, 120, 20);
+        jLayeredPane3.add(jComboBox3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton4.setFont(resourceMap.getFont("jButton4.font")); // NOI18N
+        jButton4.setText(resourceMap.getString("jButton4.text")); // NOI18N
+        jButton4.setIconTextGap(0);
+        jButton4.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton4.setName("jButton4"); // NOI18N
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
+        jButton4.setBounds(370, 85, 30, 22);
+        jLayeredPane3.add(jButton4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField12.setName("jTextField12"); // NOI18N
+        jTextField12.setBounds(280, 240, 120, 20);
+        jLayeredPane3.add(jTextField12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel17.setText(resourceMap.getString("jLabel17.text")); // NOI18N
+        jLabel17.setName("jLabel17"); // NOI18N
+        jLabel17.setBounds(210, 270, 70, 20);
+        jLayeredPane3.add(jLabel17, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel11.setText(resourceMap.getString("jLabel11.text")); // NOI18N
+        jLabel11.setName("jLabel11"); // NOI18N
+        jLabel11.setBounds(20, 210, 60, 20);
+        jLayeredPane3.add(jLabel11, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField11.setText(resourceMap.getString("jTextField11.text")); // NOI18N
+        jTextField11.setName("jTextField11"); // NOI18N
+        jTextField11.setBounds(100, 270, 100, 20);
+        jLayeredPane3.add(jTextField11, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel8.setText(resourceMap.getString("jLabel8.text")); // NOI18N
+        jLabel8.setName("jLabel8"); // NOI18N
+        jLabel8.setBounds(20, 30, 60, 20);
+        jLayeredPane3.add(jLabel8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel9.setText(resourceMap.getString("jLabel9.text")); // NOI18N
+        jLabel9.setName("jLabel9"); // NOI18N
+        jLabel9.setBounds(20, 60, 80, 30);
+        jLayeredPane3.add(jLabel9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox4.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox4.setName("jComboBox4"); // NOI18N
+        jComboBox4.setBounds(100, 345, 100, 20);
+        jLayeredPane3.add(jComboBox4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Application", "Linux App", "Daemon", "Patch", "Plugin", "Service", "Theme" }));
+        jComboBox1.setName("jComboBox1"); // NOI18N
+        jComboBox1.setBounds(100, 240, 100, 20);
+        jLayeredPane3.add(jComboBox1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jScrollPane3.setName("jScrollPane3"); // NOI18N
+
+        jTextArea2.setColumns(20);
+        jTextArea2.setFont(resourceMap.getFont("jTextArea2.font")); // NOI18N
+        jTextArea2.setLineWrap(true);
+        jTextArea2.setRows(4);
+        jTextArea2.setWrapStyleWord(true);
+        jTextArea2.setName("jTextArea2"); // NOI18N
+        jTextArea2.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                jTextArea2KeyTyped(evt);
+            }
+        });
+        jScrollPane3.setViewportView(jTextArea2);
+
+        jScrollPane3.setBounds(100, 120, 300, 80);
+        jLayeredPane3.add(jScrollPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton5.setFont(resourceMap.getFont("jButton5.font")); // NOI18N
+        jButton5.setText(resourceMap.getString("jButton5.text")); // NOI18N
+        jButton5.setIconTextGap(0);
+        jButton5.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton5.setName("jButton5"); // NOI18N
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton5ActionPerformed(evt);
+            }
+        });
+        jButton5.setBounds(370, 60, 30, 22);
+        jLayeredPane3.add(jButton5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField9.setText(resourceMap.getString("jTextField9.text")); // NOI18N
+        jTextField9.setName("jTextField9"); // NOI18N
+        jTextField9.setBounds(100, 210, 300, 20);
+        jLayeredPane3.add(jTextField9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox2.setName("jComboBox2"); // NOI18N
+        jComboBox2.setBounds(100, 305, 100, 20);
+        jLayeredPane3.add(jComboBox2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel15.setText(resourceMap.getString("jLabel15.text")); // NOI18N
+        jLabel15.setName("jLabel15"); // NOI18N
+        jLabel15.setBounds(210, 300, 70, 30);
+        jLayeredPane3.add(jLabel15, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel18.setText(resourceMap.getString("jLabel18.text")); // NOI18N
+        jLabel18.setName("jLabel18"); // NOI18N
+        jLabel18.setBounds(20, 300, 70, 30);
+        jLayeredPane3.add(jLabel18, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel12.setText(resourceMap.getString("jLabel12.text")); // NOI18N
+        jLabel12.setName("jLabel12"); // NOI18N
+        jLabel12.setBounds(20, 240, 60, 20);
+        jLayeredPane3.add(jLabel12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField4.setText(resourceMap.getString("jTextField4.text")); // NOI18N
+        jTextField4.setName("jTextField4"); // NOI18N
+        jTextField4.setBounds(100, 30, 300, 20);
+        jLayeredPane3.add(jTextField4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel16.setText(resourceMap.getString("jLabel16.text")); // NOI18N
+        jLabel16.setName("jLabel16"); // NOI18N
+        jLabel16.setBounds(20, 340, 70, 30);
+        jLayeredPane3.add(jLabel16, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane3.setBounds(360, 10, 420, 390);
+        jLayeredPane1.add(jLayeredPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane4.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane4.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane4.border.titleFont"))); // NOI18N
+        jLayeredPane4.setName("jLayeredPane4"); // NOI18N
+
+        jButton7.setFont(resourceMap.getFont("jButton7.font")); // NOI18N
+        jButton7.setText(resourceMap.getString("jButton7.text")); // NOI18N
+        jButton7.setIconTextGap(0);
+        jButton7.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton7.setName("jButton7"); // NOI18N
+        jButton7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton7ActionPerformed(evt);
+            }
+        });
+        jButton7.setBounds(290, 105, 30, 22);
+        jLayeredPane4.add(jButton7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel19.setText(resourceMap.getString("jLabel19.text")); // NOI18N
+        jLabel19.setName("jLabel19"); // NOI18N
+        jLabel19.setBounds(10, 50, 80, 20);
+        jLayeredPane4.add(jLabel19, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton6.setFont(resourceMap.getFont("jButton6.font")); // NOI18N
+        jButton6.setText(resourceMap.getString("jButton6.text")); // NOI18N
+        jButton6.setIconTextGap(0);
+        jButton6.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton6.setName("jButton6"); // NOI18N
+        jButton6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton6ActionPerformed(evt);
+            }
+        });
+        jButton6.setBounds(290, 80, 30, 22);
+        jLayeredPane4.add(jButton6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField13.setText(resourceMap.getString("jTextField13.text")); // NOI18N
+        jTextField13.setName("jTextField13"); // NOI18N
+        jTextField13.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField13MousePressed(evt);
+            }
+        });
+        jTextField13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField13ActionPerformed(evt);
+            }
+        });
+        jTextField13.setBounds(90, 20, 210, 20);
+        jLayeredPane4.add(jTextField13, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton9.setText(resourceMap.getString("jButton9.text")); // NOI18N
+        jButton9.setIconTextGap(0);
+        jButton9.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton9.setName("jButton9"); // NOI18N
+        jButton9.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton9ActionPerformed(evt);
+            }
+        });
+        jButton9.setBounds(303, 48, 20, 23);
+        jLayeredPane4.add(jButton9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel7.setText(resourceMap.getString("jLabel7.text")); // NOI18N
+        jLabel7.setName("jLabel7"); // NOI18N
+        jLabel7.setBounds(10, 80, 60, 20);
+        jLayeredPane4.add(jLabel7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jScrollPane4.setName("jScrollPane4"); // NOI18N
+
+        jList2.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jList2.setName("jList2"); // NOI18N
+        jList2.setVisibleRowCount(3);
+        jScrollPane4.setViewportView(jList2);
+
+        jScrollPane4.setBounds(90, 80, 190, 50);
+        jLayeredPane4.add(jScrollPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField14.setName("jTextField14"); // NOI18N
+        jTextField14.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField14MousePressed(evt);
+            }
+        });
+        jTextField14.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField14ActionPerformed(evt);
+            }
+        });
+        jTextField14.setBounds(90, 50, 210, 20);
+        jLayeredPane4.add(jTextField14, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton10.setText(resourceMap.getString("jButton10.text")); // NOI18N
+        jButton10.setIconTextGap(0);
+        jButton10.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton10.setName("jButton10"); // NOI18N
+        jButton10.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton10ActionPerformed(evt);
+            }
+        });
+        jButton10.setBounds(303, 18, 20, 23);
+        jLayeredPane4.add(jButton10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel20.setText(resourceMap.getString("jLabel20.text")); // NOI18N
+        jLabel20.setName("jLabel20"); // NOI18N
+        jLabel20.setBounds(10, 20, 80, 20);
+        jLayeredPane4.add(jLabel20, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane4.setBounds(10, 260, 330, 140);
+        jLayeredPane1.add(jLayeredPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField1.setText(resourceMap.getString("jTextField1.text")); // NOI18N
+        jTextField1.setName("jTextField1"); // NOI18N
+        jTextField1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField1MousePressed(evt);
+            }
+        });
+        jTextField1.setBounds(70, 10, 240, 20);
+        jLayeredPane1.add(jTextField1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel2.setFont(resourceMap.getFont("jLabel2.font")); // NOI18N
+        jLabel2.setText(resourceMap.getString("jLabel2.text")); // NOI18N
+        jLabel2.setName("jLabel2"); // NOI18N
+        jLabel2.setBounds(10, 10, 60, 20);
+        jLayeredPane1.add(jLabel2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField2.setText(resourceMap.getString("jTextField2.text")); // NOI18N
+        jTextField2.setName("jTextField2"); // NOI18N
+        jTextField2.setBounds(120, 60, 220, 20);
+        jLayeredPane1.add(jTextField2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel3.setFont(resourceMap.getFont("jLabel3.font")); // NOI18N
+        jLabel3.setText(resourceMap.getString("jLabel3.text")); // NOI18N
+        jLabel3.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jLabel3.setName("jLabel3"); // NOI18N
+        jLabel3.setBounds(10, 40, 160, 20);
+        jLayeredPane1.add(jLabel3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton3.setText(resourceMap.getString("jButton3.text")); // NOI18N
+        jButton3.setIconTextGap(0);
+        jButton3.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton3.setName("jButton3"); // NOI18N
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
+        jButton3.setBounds(320, 8, 20, 23);
+        jLayeredPane1.add(jButton3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton2.setText(resourceMap.getString("jButton2.text")); // NOI18N
+        jButton2.setIconTextGap(0);
+        jButton2.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton2.setName("jButton2"); // NOI18N
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
+        jButton2.setBounds(310, 400, 30, 30);
+        jLayeredPane1.add(jButton2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField8.setBackground(resourceMap.getColor("jTextField8.background")); // NOI18N
+        jTextField8.setEditable(false);
+        jTextField8.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        jTextField8.setText(resourceMap.getString("jTextField8.text")); // NOI18N
+        jTextField8.setName("jTextField8"); // NOI18N
+        jTextField8.setBounds(10, 60, 110, 20);
+        jLayeredPane1.add(jTextField8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton8.setText(resourceMap.getString("jButton8.text")); // NOI18N
+        jButton8.setName("jButton8"); // NOI18N
+        jButton8.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton8ActionPerformed(evt);
+            }
+        });
+        jButton8.setBounds(70, 410, 130, 30);
+        jLayeredPane1.add(jButton8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton1.setText(resourceMap.getString("jButton1.text")); // NOI18N
+        jButton1.setName("jButton1"); // NOI18N
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+        jButton1.setBounds(210, 410, 70, 30);
+        jLayeredPane1.add(jButton1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        javax.swing.GroupLayout mainPanelLayout = new javax.swing.GroupLayout(mainPanel);
+        mainPanel.setLayout(mainPanelLayout);
+        mainPanelLayout.setHorizontalGroup(
+            mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 787, Short.MAX_VALUE)
+        );
+        mainPanelLayout.setVerticalGroup(
+            mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 449, Short.MAX_VALUE)
+        );
+
+        setComponent(mainPanel);
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        folder = null;
+        postinst = null;
+        prerm = null;
+        depends.clear();
+        ssURLs.clear();
+        
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField5.setText("");
+        jTextField6.setText("");
+        jTextField7.setText("");
+        jComboBox5.setSelectedIndex(0);
+        jTextField13.setText("");
+        jTextField14.setText("");
+        jList2.setListData(depends.toArray());
+
+        jTextField4.setText("");
+        jList1.setListData(ssURLs.toArray());
+        jTextArea2.setText("");
+        jTextField9.setText("");
+        jComboBox1.setSelectedIndex(0);
+        jTextField12.setText("");
+        jTextField11.setText("");
+        jTextField10.setText("");
+        jComboBox2.setSelectedIndex(0);
+        jComboBox3.setSelectedIndex(0);
+        jComboBox4.setSelectedIndex(0);
+
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jTextField1MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField1MousePressed
+        File f = loadFileChooser(true, null, null);
+        if(f!=null) {
+            folder = f;
+            File json = new File(folder, "appinfo.json");
+            if(json.exists()) {
+                loadFromJSON(json);
+            }
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jTextField1MousePressed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        isExpanded = !isExpanded;
+        if(isExpanded) {
+            jButton2.setText("⇐");
+            getFrame().setSize(getFrame().getWidth()+437, getFrame().getHeight());
+        } else {
+            jButton2.setText("⇒");
+            getFrame().setSize(getFrame().getWidth()-437, getFrame().getHeight());
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+        jTextField1MousePressed(null);
+    }//GEN-LAST:event_jButton3ActionPerformed
+
+    private void jTextField13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField13ActionPerformed
+    }//GEN-LAST:event_jTextField13ActionPerformed
+
+    private void jButton6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton6ActionPerformed
+        String input = JOptionPane.showInputDialog("Add a depends:");
+        if(input!=null && input.length()>0) {
+            depends.add(input);
+            jList2.setListData(depends.toArray());
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton6ActionPerformed
+
+    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        int i = jList2.getSelectedIndex();
+        if(i>-1) {
+            depends.remove(i);
+            jList2.setListData(depends.toArray());
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton7ActionPerformed
+
+    private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
+        String input = JOptionPane.showInputDialog("Add a screenshot URL:");
+        if(input!=null && input.length()>0) {
+            ssURLs.add(input);
+            jList1.setListData(ssURLs.toArray());
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton5ActionPerformed
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        int i = jList1.getSelectedIndex();
+        if(i>-1) {
+            ssURLs.remove(i);
+            jList1.setListData(ssURLs.toArray());
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton4ActionPerformed
+
+    private void jTextField14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField14ActionPerformed
+    }//GEN-LAST:event_jTextField14ActionPerformed
+
+    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+        if(okToGo()) {
+            String arch = getArch();
+            String filename = jTextField5.getText() + "_" + jTextField6.getText() + "_" + arch + ".ipk";
+            File out = loadFileChooser(false, new IpkChooseFilter(), filename);
+            if(out!=null) {
+                try {
+                    if(!out.getName().endsWith(".ipk")) {
+                        out = new File(out.getCanonicalPath() + ".ipk");
+                    }
+                    IpkgBuilder ib = new IpkgBuilder(folder, getFilepath(), out);
+                    String title = jTextField3.getText().trim();
+                    ib.setPackageName(title);
+                    ib.setPackageID(jTextField5.getText().trim());
+                    ib.setPackageVersion(jTextField6.getText().trim());
+                    ib.setPackageAuthor(jTextField7.getText().trim());
+                    ib.setArch(arch);
+                    if(postinst!=null) {
+                        ib.setPostinst(postinst);
+                    }
+                    if(prerm!=null) {
+                        ib.setPrerm(prerm);
+                    }
+                    if(depends.size()>0) {
+                        ib.setDepends(depends.toArray(new String[depends.size()]));
+                    }
+                    if(isExpanded) {
+                        JSONObject source = new JSONObject();
+                        source.put("Title", title);
+                        String time = String.valueOf((System.currentTimeMillis()/1000));
+                        source.put("LastUpdated", time);
+                        String icon = jTextField4.getText().trim();
+                        if(icon.length()>0) {
+                            source.put("Icon", icon);
+                        }
+                        if(ssURLs.size()>0) {
+                            source.put("Screenshots", new JSONArray(ssURLs));
+                        }
+                        String description = jTextArea2.getText().trim();
+                        if(description.length()>0) {
+                            description = description.replaceAll("\n", "<br>");
+                            if(description.length()>4096) {
+                                description = description.substring(0, 4096);
+                            }
+                            source.put("FullDescription", description);
+                        }
+                        String homepage = jTextField9.getText().trim();
+                        if(homepage.length()>0) {
+                            source.put("Homepage", homepage);
+                        }
+                        source.put("Type", getType());
+                        String category = jTextField12.getText().trim();
+                        if(category.length()>0) {
+                            source.put("Category", category);
+                        }
+                        String license = jTextField11.getText().trim();
+                        if(license.length()>0) {
+                            source.put("License", license);
+                        }
+                        String srcURL = jTextField10.getText().trim();
+                        if(srcURL.length()>0) {
+                            source.put("Source", srcURL);
+                        }
+                        String piFlag = getFlag(jComboBox2);
+                        if(piFlag!=null) {
+                            source.put("PostInstallFlags", piFlag);
+                        }
+                        String puFlag = getFlag(jComboBox3);
+                        if(puFlag!=null) {
+                            source.put("PostUpdateFlags", puFlag);
+                        }
+                        String prFlag = getFlag(jComboBox4);
+                        if(prFlag!=null) {
+                            source.put("PostRemoveFlags", prFlag);
+                        }
+                        ib.setPackageSource(source);
+                    }
+                    ib.build();
+                    JOptionPane.showMessageDialog(mainPanel, "Package created successfully!");
+                } catch(Exception e) {}
+            }
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jButton8ActionPerformed
+
+    private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
+        jTextField14MousePressed(null);
+    }//GEN-LAST:event_jButton9ActionPerformed
+
+    private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
+        jTextField13MousePressed(null);
+    }//GEN-LAST:event_jButton10ActionPerformed
+
+    private void jTextArea2KeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextArea2KeyTyped
+        String text = jTextArea2.getText().replaceAll("\n", "<br>");
+        if(text.length()>4096) {
+            text = text.substring(0, 4096);
+        }
+        jTextArea2.setText(text.replaceAll("<br>", "\n"));
+    }//GEN-LAST:event_jTextArea2KeyTyped
+
+    private void jTextField13MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField13MousePressed
+        postinst = loadFileChooser(false, null, null);
+        if(postinst!=null) {
+            jTextField13.setText(postinst.getAbsolutePath());
+        } else {
+            jTextField13.setText("");
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jTextField13MousePressed
+
+    private void jTextField14MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField14MousePressed
+        prerm = loadFileChooser(false, null, null);
+        if(prerm!=null) {
+            jTextField14.setText(prerm.getAbsolutePath());
+        } else {
+            jTextField14.setText("");
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jTextField14MousePressed
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton10;
+    private javax.swing.JButton jButton2;
+    private javax.swing.JButton jButton3;
+    private javax.swing.JButton jButton4;
+    private javax.swing.JButton jButton5;
+    private javax.swing.JButton jButton6;
+    private javax.swing.JButton jButton7;
+    private javax.swing.JButton jButton8;
+    private javax.swing.JButton jButton9;
+    private javax.swing.JComboBox jComboBox1;
+    private javax.swing.JComboBox jComboBox2;
+    private javax.swing.JComboBox jComboBox3;
+    private javax.swing.JComboBox jComboBox4;
+    private javax.swing.JComboBox jComboBox5;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel20;
+    private javax.swing.JLabel jLabel21;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JLayeredPane jLayeredPane1;
+    private javax.swing.JLayeredPane jLayeredPane2;
+    private javax.swing.JLayeredPane jLayeredPane3;
+    private javax.swing.JLayeredPane jLayeredPane4;
+    private javax.swing.JList jList1;
+    private javax.swing.JList jList2;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JTextArea jTextArea2;
+    private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jTextField10;
+    private javax.swing.JTextField jTextField11;
+    private javax.swing.JTextField jTextField12;
+    private javax.swing.JTextField jTextField13;
+    private javax.swing.JTextField jTextField14;
+    private javax.swing.JTextField jTextField2;
+    private javax.swing.JTextField jTextField3;
+    private javax.swing.JTextField jTextField4;
+    private javax.swing.JTextField jTextField5;
+    private javax.swing.JTextField jTextField6;
+    private javax.swing.JTextField jTextField7;
+    private javax.swing.JTextField jTextField8;
+    private javax.swing.JTextField jTextField9;
+    private javax.swing.JPanel mainPanel;
+    // End of variables declaration//GEN-END:variables
+
+    private class DelayedLoad extends TimerTask {
+        public void run() {
+            jLayeredPane1.requestFocus();
+            if(!isExpanded && getFrame().getWidth()!=356) {
+                jButton2.setText("⇒");
+                getFrame().setSize(getFrame().getWidth()-437, getFrame().getHeight());
+            }
+        }
+    }
+
+    private class IpkChooseFilter extends FileFilter {
+        private final String okFileExtension = ".ipk";
+
+        public boolean accept(File f) {
+            if (f.getName().toLowerCase().endsWith(okFileExtension) || f.isDirectory())
+                return true;
+            return false;
+        }
+
+        public String getDescription() {
+            return "Ipk Files";
+        }
+    }
+}
