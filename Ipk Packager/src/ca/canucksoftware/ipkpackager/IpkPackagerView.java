@@ -8,8 +8,10 @@ import ca.canucksoftware.ipk.IpkgBuilder;
 import java.awt.Component;
 import java.awt.Container;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Timer;
@@ -146,6 +148,18 @@ public class IpkPackagerView extends FrameView {
         return result;
     }
 
+    private void setArch(String arch) {
+        if(arch.equalsIgnoreCase("armv6")) {
+            jComboBox5.setSelectedIndex(1);
+        } else if(arch.equalsIgnoreCase("armv7")) {
+            jComboBox5.setSelectedIndex(2);
+        } else if(arch.equalsIgnoreCase("i686")) {
+            jComboBox5.setSelectedIndex(3);
+        } else {
+            jComboBox5.setSelectedIndex(0);
+        }
+    }
+
     private String getType() {
         String result = "Application";
         if(jComboBox1.getSelectedIndex()==1) {
@@ -164,6 +178,24 @@ public class IpkPackagerView extends FrameView {
         return result;
     }
 
+    private void setType(String type) {
+        if(type.equalsIgnoreCase("Linux Application")) {
+            jComboBox1.setSelectedIndex(1);
+        } else if(type.equalsIgnoreCase("Linux Daemon")) {
+            jComboBox1.setSelectedIndex(2);
+        } else if(type.equalsIgnoreCase("Patch")) {
+            jComboBox1.setSelectedIndex(3);
+        } else if(type.equalsIgnoreCase("Plugin")) {
+            jComboBox1.setSelectedIndex(4);
+        } else if(type.equalsIgnoreCase("Service")) {
+            jComboBox1.setSelectedIndex(5);
+        } else if(type.equalsIgnoreCase("Theme")) {
+            jComboBox1.setSelectedIndex(6);
+        } else {
+            jComboBox1.setSelectedIndex(0);
+        }
+    }
+
     private String getFlag(javax.swing.JComboBox comboBox) {
         String result = null;
         if(comboBox.getSelectedIndex()==1) {
@@ -171,9 +203,21 @@ public class IpkPackagerView extends FrameView {
         } else if(comboBox.getSelectedIndex()==2) {
             result = "RestartLuna";
         } else if(comboBox.getSelectedIndex()==3) {
-            result = "RestartDevice ";
+            result = "RestartDevice";
         }
         return result;
+    }
+
+    private void setFlag(javax.swing.JComboBox comboBox, String flag) {
+        if(flag.equals("RestartJava")) {
+            comboBox.setSelectedIndex(1);
+        } else if(flag.equals("RestartLuna")) {
+            comboBox.setSelectedIndex(2);
+        } else if(flag.equals("RestartDevice")) {
+            comboBox.setSelectedIndex(2);
+        } else {
+            comboBox.setSelectedIndex(0);
+        }
     }
 
     private String readFile(File f) throws IOException {
@@ -213,6 +257,116 @@ public class IpkPackagerView extends FrameView {
                     jTextField7.setText(jsonO.getString("vendor"));
                 }
             }
+        } catch(Exception e) {}
+    }
+
+    public void checkForControl(File dir) {
+        File control = new File(dir, "control");
+        File postInstall = new File(dir, "postinst");
+        File preRemoval = new File(dir, "prerm");
+        if(control.exists()) {
+            readFromControlFile(control);
+        }
+        if(postInstall.exists()) {
+            postinst = postInstall;
+            jTextField13.setText(postinst.getAbsolutePath());
+        }
+        if(preRemoval.exists()) {
+            prerm = preRemoval;
+            jTextField14.setText(prerm.getAbsolutePath());
+        }
+    }
+
+    public void readFromControlFile(File control) {
+    	try {
+            BufferedReader input = new BufferedReader(new FileReader(control));
+            String line = input.readLine();
+            while(line!=null) {
+                line = line.trim();
+                if(line.length()>0)
+                    if(line.startsWith("Package")) {
+                    	jTextField5.setText(line.substring(line.indexOf(":")+2));
+                    } else if(line.startsWith("Description")) {
+                    	jTextField3.setText(line.substring(line.indexOf(":")+2));
+                    } else if(line.startsWith("Version")) {
+                    	jTextField6.setText(line.substring(line.indexOf(":")+2));
+                    } else if(line.startsWith("Architecture")) {
+                    	setArch(line.substring(line.indexOf(":")+2));
+                    } else if(line.startsWith("Maintainer")) {
+                        jTextField7.setText(line.substring(line.indexOf(":")+2));
+                    } else if(line.startsWith("Depends")) {
+                        String[] tokens = line.substring(line.indexOf(":")+2)
+                                .split(",");
+                        for(int i=0; i<tokens.length; i++) {
+                            tokens[i] = tokens[i].trim();
+                            if(!depends.contains(tokens[i])) {
+                                depends.add(tokens[i]);
+                            }
+                        }
+                        jList2.setListData(depends.toArray());
+                    } else if(line.startsWith("Source")) {
+                    	JSONObject src = new JSONObject(line.substring(
+                                line.indexOf(":")+2));
+                        if(src.has("Icon")) {
+                            jTextField4.setText(src.getString("Icon"));
+                        }
+                        if(src.has("Screenshots")) {
+                            JSONArray ss = src.getJSONArray("Screenshots");
+                            for(int i=0; i<ss.length(); i++) {
+                                if(!ssURLs.contains(ss.getString(i))) {
+                                    ssURLs.add(ss.getString(i));
+                                }
+                            }
+                            jList1.setListData(ssURLs.toArray());
+                        }
+                        if(src.has("FullDescription")) {
+                            jTextArea2.setText(src.getString("FullDescription")
+                                    .replaceAll("<br>", "\n"));
+                        }
+                        if(src.has("Homepage")) {
+                            jTextField9.setText(src.getString("Homepage"));
+                        }
+                        if(src.has("Type")) {
+                            setType(src.getString("Type"));
+                        }
+                        if(src.has("Category")) {
+                            jTextField12.setText(src.getString("Category"));
+                        }
+                        if(src.has("License")) {
+                            jTextField11.setText(src.getString("License"));
+                        }
+                        if(src.has("Source")) {
+                            jTextField10.setText(src.getString("Source"));
+                        }
+                        if(src.has("PostInstallFlags")) {
+                            setFlag(jComboBox2, src.getString("PostInstallFlags"));
+                        }
+                        if(src.has("PostUpdateFlags")) {
+                            setFlag(jComboBox3, src.getString("PostUpdateFlags"));
+                        }
+                        if(src.has("PostRemoveFlags")) {
+                            setFlag(jComboBox4, src.getString("PostRemoveFlags"));
+                        }
+                    }
+                line = input.readLine();
+            }
+        } catch(Exception e) {}
+    }
+
+    private void swapEndlineCharacters(File f) {
+        try {
+            StringBuffer sb = new StringBuffer();
+            BufferedReader br = new BufferedReader(new FileReader(f));
+            String line = br.readLine();
+            while(line!=null) {
+                sb.append(line+"\n");
+                line = br.readLine();
+            }
+            br.close();
+            BufferedWriter out=new BufferedWriter (new FileWriter(f));
+            out.write(sb.toString());
+            out.flush();
+            out.close();
         } catch(Exception e) {}
     }
 
@@ -752,6 +906,10 @@ public class IpkPackagerView extends FrameView {
             if(json.exists()) {
                 loadFromJSON(json);
             }
+            checkForControl(folder);
+            checkForControl(new File(folder, "CONTROL"));
+            checkForControl(folder.getParentFile());
+            checkForControl(new File(folder.getParentFile(), "CONTROL"));
         }
         t.schedule(new DelayedLoad(), 50);
     }//GEN-LAST:event_jTextField1MousePressed
@@ -832,9 +990,11 @@ public class IpkPackagerView extends FrameView {
                     ib.setPackageAuthor(jTextField7.getText().trim());
                     ib.setArch(arch);
                     if(postinst!=null) {
+                        swapEndlineCharacters(postinst);
                         ib.setPostinst(postinst);
                     }
                     if(prerm!=null) {
+                        swapEndlineCharacters(prerm);
                         ib.setPrerm(prerm);
                     }
                     if(depends.size()>0) {
@@ -910,9 +1070,15 @@ public class IpkPackagerView extends FrameView {
     private void jTextArea2KeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextArea2KeyTyped
         String text = jTextArea2.getText().replaceAll("\n", "<br>");
         if(text.length()>4096) {
+            int caret = jTextArea2.getCaretPosition();
             text = text.substring(0, 4096);
+            text = text.replaceAll("<br>", "\n");
+            if(caret >= text.length()) {
+                caret = text.length()-1;
+            }
+            jTextArea2.setText(text);
+            jTextArea2.setCaretPosition(caret);
         }
-        jTextArea2.setText(text.replaceAll("<br>", "\n"));
     }//GEN-LAST:event_jTextArea2KeyTyped
 
     private void jTextField13MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField13MousePressed
