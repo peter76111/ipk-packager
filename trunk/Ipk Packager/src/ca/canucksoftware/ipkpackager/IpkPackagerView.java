@@ -17,12 +17,17 @@ import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 import org.jdesktop.application.SingleFrameApplication;
 import org.jdesktop.application.FrameView;
 import org.json.JSONArray;
@@ -47,6 +52,8 @@ public class IpkPackagerView extends FrameView {
         isExpanded = false;
         depends = new ArrayList<String>();
         ssURLs = new ArrayList<String>();
+        jTextField5.setDocument(new DocumentFilter(DocumentFilter.ALPHA_NUMERIC));
+        jTextField6.setDocument(new DocumentFilter(DocumentFilter.FLOAT));
         t = new Timer();
         t.schedule(new ResizeScreen(), 50);
         t.schedule(new DelayedLoad(), 50);
@@ -124,6 +131,25 @@ public class IpkPackagerView extends FrameView {
                 (jTextField5.getText().length()!=0) &&
                 (jTextField7.getText().length()!=0) &&
                 (jTextField6.getText().length()!=0));
+    }
+
+    private void setAuthor(IpkgBuilder ib) {
+        String text = jTextField7.getText().trim();
+        String[] tokens = text.split("\\s+");
+        Pattern p = Pattern.compile(".+@.+\\.[a-z]+");
+        for(int i=0; i<tokens.length; i++) {
+            String email = tokens[i].replaceAll("<", "");
+            email = email.replaceAll(">", "");
+            Matcher m = p.matcher(email);
+            if(m.matches()) {
+                tokens[i] = "<" + email + ">";
+            }
+        }
+        text = "";
+        for(int i=0; i<tokens.length; i++) {
+            text += tokens[i] + " ";
+        }
+        ib.setPackageAuthor(text.trim());
     }
 
     private String getFilepath() {
@@ -220,6 +246,20 @@ public class IpkPackagerView extends FrameView {
         }
     }
 
+    private void resetCaretPositions() {
+        jTextField2.setCaretPosition(0);
+        jTextField3.setCaretPosition(0);
+        jTextField5.setCaretPosition(0);
+        jTextField6.setCaretPosition(0);
+        jTextField7.setCaretPosition(0);
+        jTextField4.setCaretPosition(0);
+        jTextArea2.setCaretPosition(0);
+        jTextField9.setCaretPosition(0);
+        jTextField12.setCaretPosition(0);
+        jTextField11.setCaretPosition(0);
+        jTextField10.setCaretPosition(0);
+    }
+
     private String readFile(File f) throws IOException {
         String out = "";
         String line = null;
@@ -251,7 +291,8 @@ public class IpkPackagerView extends FrameView {
                     jTextField2.setCaretPosition(0);
                 }
                 if(jsonO.has("version")) {
-                    jTextField6.setText(jsonO.getString("version"));
+                    jTextField6.setText(jsonO.getString("version")
+                            .replaceAll("-", ".").replaceAll("_", "."));
                 }
                 if(jsonO.has("vendor")) {
                     jTextField7.setText(jsonO.getString("vendor"));
@@ -266,6 +307,9 @@ public class IpkPackagerView extends FrameView {
         File preRemoval = new File(dir, "prerm");
         if(control.exists()) {
             readFromControlFile(control);
+            if(jTextField2.getText().length()==0) {
+                jTextField2.setText("/");
+            }
         }
         if(postInstall.exists()) {
             postinst = postInstall;
@@ -283,13 +327,14 @@ public class IpkPackagerView extends FrameView {
             String line = input.readLine();
             while(line!=null) {
                 line = line.trim();
-                if(line.length()>0)
+                if(line.length()>0 && line.indexOf(":")!=line.length()-1) {
                     if(line.startsWith("Package")) {
                     	jTextField5.setText(line.substring(line.indexOf(":")+2));
                     } else if(line.startsWith("Description")) {
                     	jTextField3.setText(line.substring(line.indexOf(":")+2));
                     } else if(line.startsWith("Version")) {
-                    	jTextField6.setText(line.substring(line.indexOf(":")+2));
+                    	jTextField6.setText(line.substring(line.indexOf(":")+2)
+                                .replaceAll("-", ".").replaceAll("_", "."));
                     } else if(line.startsWith("Architecture")) {
                     	setArch(line.substring(line.indexOf(":")+2));
                     } else if(line.startsWith("Maintainer")) {
@@ -348,6 +393,7 @@ public class IpkPackagerView extends FrameView {
                             setFlag(jComboBox4, src.getString("PostRemoveFlags"));
                         }
                     }
+                }
                 line = input.readLine();
             }
         } catch(Exception e) {}
@@ -381,395 +427,98 @@ public class IpkPackagerView extends FrameView {
 
         mainPanel = new javax.swing.JPanel();
         jLayeredPane1 = new javax.swing.JLayeredPane();
-        jLayeredPane2 = new javax.swing.JLayeredPane();
-        jTextField5 = new javax.swing.JTextField();
-        jComboBox5 = new javax.swing.JComboBox();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jTextField3 = new javax.swing.JTextField();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jTextField6 = new javax.swing.JTextField();
-        jLabel21 = new javax.swing.JLabel();
-        jTextField7 = new javax.swing.JTextField();
-        jLayeredPane3 = new javax.swing.JLayeredPane();
-        jTextField10 = new javax.swing.JTextField();
-        jLabel10 = new javax.swing.JLabel();
-        jLabel14 = new javax.swing.JLabel();
-        jLabel13 = new javax.swing.JLabel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        jList1 = new javax.swing.JList();
-        jComboBox3 = new javax.swing.JComboBox();
-        jButton4 = new javax.swing.JButton();
-        jTextField12 = new javax.swing.JTextField();
-        jLabel17 = new javax.swing.JLabel();
-        jLabel11 = new javax.swing.JLabel();
-        jTextField11 = new javax.swing.JTextField();
-        jLabel8 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        jComboBox4 = new javax.swing.JComboBox();
-        jComboBox1 = new javax.swing.JComboBox();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        jTextArea2 = new javax.swing.JTextArea();
-        jButton5 = new javax.swing.JButton();
-        jTextField9 = new javax.swing.JTextField();
-        jComboBox2 = new javax.swing.JComboBox();
-        jLabel15 = new javax.swing.JLabel();
-        jLabel18 = new javax.swing.JLabel();
-        jLabel12 = new javax.swing.JLabel();
-        jTextField4 = new javax.swing.JTextField();
-        jLabel16 = new javax.swing.JLabel();
-        jLayeredPane4 = new javax.swing.JLayeredPane();
-        jButton7 = new javax.swing.JButton();
-        jLabel19 = new javax.swing.JLabel();
-        jButton6 = new javax.swing.JButton();
-        jTextField13 = new javax.swing.JTextField();
-        jButton9 = new javax.swing.JButton();
-        jLabel7 = new javax.swing.JLabel();
-        jScrollPane4 = new javax.swing.JScrollPane();
-        jList2 = new javax.swing.JList();
-        jTextField14 = new javax.swing.JTextField();
-        jButton10 = new javax.swing.JButton();
-        jLabel20 = new javax.swing.JLabel();
+        jButton8 = new javax.swing.JButton();
+        jTextField8 = new javax.swing.JTextField();
+        jButton1 = new javax.swing.JButton();
         jTextField1 = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         jTextField2 = new javax.swing.JTextField();
         jLabel3 = new javax.swing.JLabel();
         jButton3 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
-        jTextField8 = new javax.swing.JTextField();
-        jButton8 = new javax.swing.JButton();
-        jButton1 = new javax.swing.JButton();
+        jLayeredPane2 = new javax.swing.JLayeredPane();
+        jLabel5 = new javax.swing.JLabel();
+        jTextField5 = new javax.swing.JTextField();
+        jLabel1 = new javax.swing.JLabel();
+        jComboBox5 = new javax.swing.JComboBox();
+        jTextField3 = new javax.swing.JTextField();
+        jLabel4 = new javax.swing.JLabel();
+        jTextField6 = new javax.swing.JTextField();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel21 = new javax.swing.JLabel();
+        jTextField7 = new javax.swing.JTextField();
+        jLayeredPane3 = new javax.swing.JLayeredPane();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel18 = new javax.swing.JLabel();
+        jComboBox2 = new javax.swing.JComboBox();
+        jLabel10 = new javax.swing.JLabel();
+        jTextField4 = new javax.swing.JTextField();
+        jTextField10 = new javax.swing.JTextField();
+        jLabel12 = new javax.swing.JLabel();
+        jTextField12 = new javax.swing.JTextField();
+        jLabel11 = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        jButton4 = new javax.swing.JButton();
+        jComboBox4 = new javax.swing.JComboBox();
+        jButton5 = new javax.swing.JButton();
+        jLabel17 = new javax.swing.JLabel();
+        jTextField11 = new javax.swing.JTextField();
+        jLabel16 = new javax.swing.JLabel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTextArea2 = new javax.swing.JTextArea();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jList1 = new javax.swing.JList();
+        jComboBox3 = new javax.swing.JComboBox();
+        jLabel8 = new javax.swing.JLabel();
+        jComboBox1 = new javax.swing.JComboBox();
+        jLabel13 = new javax.swing.JLabel();
+        jTextField9 = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
+        jLayeredPane4 = new javax.swing.JLayeredPane();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        jList2 = new javax.swing.JList();
+        jButton6 = new javax.swing.JButton();
+        jTextField13 = new javax.swing.JTextField();
+        jButton9 = new javax.swing.JButton();
+        jButton10 = new javax.swing.JButton();
+        jButton7 = new javax.swing.JButton();
+        jLabel19 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
+        jTextField14 = new javax.swing.JTextField();
+        jLabel20 = new javax.swing.JLabel();
 
         mainPanel.setName("mainPanel"); // NOI18N
 
         jLayeredPane1.setName("jLayeredPane1"); // NOI18N
 
         org.jdesktop.application.ResourceMap resourceMap = org.jdesktop.application.Application.getInstance(ca.canucksoftware.ipkpackager.IpkPackagerApp.class).getContext().getResourceMap(IpkPackagerView.class);
-        jLayeredPane2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane2.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane2.border.titleFont"))); // NOI18N
-        jLayeredPane2.setName("jLayeredPane2"); // NOI18N
-
-        jTextField5.setText(resourceMap.getString("jTextField5.text")); // NOI18N
-        jTextField5.setName("jTextField5"); // NOI18N
-        jTextField5.setBounds(90, 50, 220, 20);
-        jLayeredPane2.add(jTextField5, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jComboBox5.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "all", "armv6  (Palm Pixi/Pixi Plus)", "armv7  (Palm Pre/Pre Plus)", "i686  (emulator)" }));
-        jComboBox5.setName("jComboBox5"); // NOI18N
-        jComboBox5.setBounds(90, 140, 220, 20);
-        jLayeredPane2.add(jComboBox5, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel6.setText(resourceMap.getString("jLabel6.text")); // NOI18N
-        jLabel6.setName("jLabel6"); // NOI18N
-        jLabel6.setBounds(20, 80, 70, 20);
-        jLayeredPane2.add(jLabel6, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel4.setText(resourceMap.getString("jLabel4.text")); // NOI18N
-        jLabel4.setName("jLabel4"); // NOI18N
-        jLabel4.setBounds(20, 20, 70, 20);
-        jLayeredPane2.add(jLabel4, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField3.setText(resourceMap.getString("jTextField3.text")); // NOI18N
-        jTextField3.setName("jTextField3"); // NOI18N
-        jTextField3.setBounds(90, 20, 220, 20);
-        jLayeredPane2.add(jTextField3, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel1.setText(resourceMap.getString("jLabel1.text")); // NOI18N
-        jLabel1.setName("jLabel1"); // NOI18N
-        jLabel1.setBounds(20, 110, 70, 20);
-        jLayeredPane2.add(jLabel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel5.setText(resourceMap.getString("jLabel5.text")); // NOI18N
-        jLabel5.setName("jLabel5"); // NOI18N
-        jLabel5.setBounds(20, 50, 70, 20);
-        jLayeredPane2.add(jLabel5, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField6.setText(resourceMap.getString("jTextField6.text")); // NOI18N
-        jTextField6.setName("jTextField6"); // NOI18N
-        jTextField6.setBounds(90, 80, 220, 20);
-        jLayeredPane2.add(jTextField6, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel21.setText(resourceMap.getString("jLabel21.text")); // NOI18N
-        jLabel21.setName("jLabel21"); // NOI18N
-        jLabel21.setBounds(20, 140, 70, 20);
-        jLayeredPane2.add(jLabel21, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField7.setText(resourceMap.getString("jTextField7.text")); // NOI18N
-        jTextField7.setName("jTextField7"); // NOI18N
-        jTextField7.setBounds(90, 110, 220, 20);
-        jLayeredPane2.add(jTextField7, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLayeredPane2.setBounds(10, 90, 330, 170);
-        jLayeredPane1.add(jLayeredPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLayeredPane3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane3.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane3.border.titleFont"))); // NOI18N
-        jLayeredPane3.setName("jLayeredPane3"); // NOI18N
-
-        jTextField10.setText(resourceMap.getString("jTextField10.text")); // NOI18N
-        jTextField10.setName("jTextField10"); // NOI18N
-        jTextField10.setBounds(280, 270, 120, 20);
-        jLayeredPane3.add(jTextField10, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel10.setText(resourceMap.getString("jLabel10.text")); // NOI18N
-        jLabel10.setName("jLabel10"); // NOI18N
-        jLabel10.setBounds(20, 120, 80, 20);
-        jLayeredPane3.add(jLabel10, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel14.setText(resourceMap.getString("jLabel14.text")); // NOI18N
-        jLabel14.setName("jLabel14"); // NOI18N
-        jLabel14.setBounds(20, 270, 60, 20);
-        jLayeredPane3.add(jLabel14, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel13.setText(resourceMap.getString("jLabel13.text")); // NOI18N
-        jLabel13.setName("jLabel13"); // NOI18N
-        jLabel13.setBounds(210, 240, 70, 20);
-        jLayeredPane3.add(jLabel13, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jScrollPane2.setName("jScrollPane2"); // NOI18N
-
-        jList1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jList1.setName("jList1"); // NOI18N
-        jList1.setVisibleRowCount(3);
-        jScrollPane2.setViewportView(jList1);
-
-        jScrollPane2.setBounds(100, 60, 260, 50);
-        jLayeredPane3.add(jScrollPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
-        jComboBox3.setName("jComboBox3"); // NOI18N
-        jComboBox3.setBounds(280, 305, 120, 20);
-        jLayeredPane3.add(jComboBox3, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jButton4.setFont(resourceMap.getFont("jButton4.font")); // NOI18N
-        jButton4.setText(resourceMap.getString("jButton4.text")); // NOI18N
-        jButton4.setIconTextGap(0);
-        jButton4.setMargin(new java.awt.Insets(-1, -1, 0, 0));
-        jButton4.setName("jButton4"); // NOI18N
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
+        jButton8.setText(resourceMap.getString("jButton8.text")); // NOI18N
+        jButton8.setName("jButton8"); // NOI18N
+        jButton8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+                jButton8ActionPerformed(evt);
             }
         });
-        jButton4.setBounds(370, 85, 30, 22);
-        jLayeredPane3.add(jButton4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jButton8.setBounds(70, 410, 130, 30);
+        jLayeredPane1.add(jButton8, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jTextField12.setName("jTextField12"); // NOI18N
-        jTextField12.setBounds(280, 240, 120, 20);
-        jLayeredPane3.add(jTextField12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jTextField8.setBackground(resourceMap.getColor("jTextField8.background")); // NOI18N
+        jTextField8.setEditable(false);
+        jTextField8.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        jTextField8.setText(resourceMap.getString("jTextField8.text")); // NOI18N
+        jTextField8.setName("jTextField8"); // NOI18N
+        jTextField8.setBounds(10, 60, 110, 20);
+        jLayeredPane1.add(jTextField8, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jLabel17.setText(resourceMap.getString("jLabel17.text")); // NOI18N
-        jLabel17.setName("jLabel17"); // NOI18N
-        jLabel17.setBounds(210, 270, 70, 20);
-        jLayeredPane3.add(jLabel17, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel11.setText(resourceMap.getString("jLabel11.text")); // NOI18N
-        jLabel11.setName("jLabel11"); // NOI18N
-        jLabel11.setBounds(20, 210, 60, 20);
-        jLayeredPane3.add(jLabel11, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField11.setText(resourceMap.getString("jTextField11.text")); // NOI18N
-        jTextField11.setName("jTextField11"); // NOI18N
-        jTextField11.setBounds(100, 270, 100, 20);
-        jLayeredPane3.add(jTextField11, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel8.setText(resourceMap.getString("jLabel8.text")); // NOI18N
-        jLabel8.setName("jLabel8"); // NOI18N
-        jLabel8.setBounds(20, 30, 60, 20);
-        jLayeredPane3.add(jLabel8, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel9.setText(resourceMap.getString("jLabel9.text")); // NOI18N
-        jLabel9.setName("jLabel9"); // NOI18N
-        jLabel9.setBounds(20, 60, 80, 30);
-        jLayeredPane3.add(jLabel9, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jComboBox4.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
-        jComboBox4.setName("jComboBox4"); // NOI18N
-        jComboBox4.setBounds(100, 345, 100, 20);
-        jLayeredPane3.add(jComboBox4, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Application", "Linux App", "Daemon", "Patch", "Plugin", "Service", "Theme" }));
-        jComboBox1.setName("jComboBox1"); // NOI18N
-        jComboBox1.setBounds(100, 240, 100, 20);
-        jLayeredPane3.add(jComboBox1, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jScrollPane3.setName("jScrollPane3"); // NOI18N
-
-        jTextArea2.setColumns(20);
-        jTextArea2.setFont(resourceMap.getFont("jTextArea2.font")); // NOI18N
-        jTextArea2.setLineWrap(true);
-        jTextArea2.setRows(4);
-        jTextArea2.setWrapStyleWord(true);
-        jTextArea2.setName("jTextArea2"); // NOI18N
-        jTextArea2.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyTyped(java.awt.event.KeyEvent evt) {
-                jTextArea2KeyTyped(evt);
-            }
-        });
-        jScrollPane3.setViewportView(jTextArea2);
-
-        jScrollPane3.setBounds(100, 120, 300, 80);
-        jLayeredPane3.add(jScrollPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jButton5.setFont(resourceMap.getFont("jButton5.font")); // NOI18N
-        jButton5.setText(resourceMap.getString("jButton5.text")); // NOI18N
-        jButton5.setIconTextGap(0);
-        jButton5.setMargin(new java.awt.Insets(-1, -1, 0, 0));
-        jButton5.setName("jButton5"); // NOI18N
-        jButton5.addActionListener(new java.awt.event.ActionListener() {
+        jButton1.setText(resourceMap.getString("jButton1.text")); // NOI18N
+        jButton1.setName("jButton1"); // NOI18N
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton5ActionPerformed(evt);
+                jButton1ActionPerformed(evt);
             }
         });
-        jButton5.setBounds(370, 60, 30, 22);
-        jLayeredPane3.add(jButton5, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField9.setText(resourceMap.getString("jTextField9.text")); // NOI18N
-        jTextField9.setName("jTextField9"); // NOI18N
-        jTextField9.setBounds(100, 210, 300, 20);
-        jLayeredPane3.add(jTextField9, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
-        jComboBox2.setName("jComboBox2"); // NOI18N
-        jComboBox2.setBounds(100, 305, 100, 20);
-        jLayeredPane3.add(jComboBox2, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel15.setText(resourceMap.getString("jLabel15.text")); // NOI18N
-        jLabel15.setName("jLabel15"); // NOI18N
-        jLabel15.setBounds(210, 300, 70, 30);
-        jLayeredPane3.add(jLabel15, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel18.setText(resourceMap.getString("jLabel18.text")); // NOI18N
-        jLabel18.setName("jLabel18"); // NOI18N
-        jLabel18.setBounds(20, 300, 70, 30);
-        jLayeredPane3.add(jLabel18, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel12.setText(resourceMap.getString("jLabel12.text")); // NOI18N
-        jLabel12.setName("jLabel12"); // NOI18N
-        jLabel12.setBounds(20, 240, 60, 20);
-        jLayeredPane3.add(jLabel12, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField4.setText(resourceMap.getString("jTextField4.text")); // NOI18N
-        jTextField4.setName("jTextField4"); // NOI18N
-        jTextField4.setBounds(100, 30, 300, 20);
-        jLayeredPane3.add(jTextField4, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel16.setText(resourceMap.getString("jLabel16.text")); // NOI18N
-        jLabel16.setName("jLabel16"); // NOI18N
-        jLabel16.setBounds(20, 340, 70, 30);
-        jLayeredPane3.add(jLabel16, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLayeredPane3.setBounds(360, 10, 420, 390);
-        jLayeredPane1.add(jLayeredPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLayeredPane4.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane4.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane4.border.titleFont"))); // NOI18N
-        jLayeredPane4.setName("jLayeredPane4"); // NOI18N
-
-        jButton7.setFont(resourceMap.getFont("jButton7.font")); // NOI18N
-        jButton7.setText(resourceMap.getString("jButton7.text")); // NOI18N
-        jButton7.setIconTextGap(0);
-        jButton7.setMargin(new java.awt.Insets(-1, -1, 0, 0));
-        jButton7.setName("jButton7"); // NOI18N
-        jButton7.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton7ActionPerformed(evt);
-            }
-        });
-        jButton7.setBounds(290, 105, 30, 22);
-        jLayeredPane4.add(jButton7, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel19.setText(resourceMap.getString("jLabel19.text")); // NOI18N
-        jLabel19.setName("jLabel19"); // NOI18N
-        jLabel19.setBounds(10, 50, 80, 20);
-        jLayeredPane4.add(jLabel19, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jButton6.setFont(resourceMap.getFont("jButton6.font")); // NOI18N
-        jButton6.setText(resourceMap.getString("jButton6.text")); // NOI18N
-        jButton6.setIconTextGap(0);
-        jButton6.setMargin(new java.awt.Insets(-1, -1, 0, 0));
-        jButton6.setName("jButton6"); // NOI18N
-        jButton6.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton6ActionPerformed(evt);
-            }
-        });
-        jButton6.setBounds(290, 80, 30, 22);
-        jLayeredPane4.add(jButton6, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField13.setText(resourceMap.getString("jTextField13.text")); // NOI18N
-        jTextField13.setName("jTextField13"); // NOI18N
-        jTextField13.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                jTextField13MousePressed(evt);
-            }
-        });
-        jTextField13.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField13ActionPerformed(evt);
-            }
-        });
-        jTextField13.setBounds(90, 20, 210, 20);
-        jLayeredPane4.add(jTextField13, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jButton9.setText(resourceMap.getString("jButton9.text")); // NOI18N
-        jButton9.setIconTextGap(0);
-        jButton9.setMargin(new java.awt.Insets(2, 2, 2, 2));
-        jButton9.setName("jButton9"); // NOI18N
-        jButton9.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton9ActionPerformed(evt);
-            }
-        });
-        jButton9.setBounds(303, 48, 20, 23);
-        jLayeredPane4.add(jButton9, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel7.setText(resourceMap.getString("jLabel7.text")); // NOI18N
-        jLabel7.setName("jLabel7"); // NOI18N
-        jLabel7.setBounds(10, 80, 60, 20);
-        jLayeredPane4.add(jLabel7, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jScrollPane4.setName("jScrollPane4"); // NOI18N
-
-        jList2.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jList2.setName("jList2"); // NOI18N
-        jList2.setVisibleRowCount(3);
-        jScrollPane4.setViewportView(jList2);
-
-        jScrollPane4.setBounds(90, 80, 190, 50);
-        jLayeredPane4.add(jScrollPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jTextField14.setName("jTextField14"); // NOI18N
-        jTextField14.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                jTextField14MousePressed(evt);
-            }
-        });
-        jTextField14.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField14ActionPerformed(evt);
-            }
-        });
-        jTextField14.setBounds(90, 50, 210, 20);
-        jLayeredPane4.add(jTextField14, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jButton10.setText(resourceMap.getString("jButton10.text")); // NOI18N
-        jButton10.setIconTextGap(0);
-        jButton10.setMargin(new java.awt.Insets(2, 2, 2, 2));
-        jButton10.setName("jButton10"); // NOI18N
-        jButton10.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton10ActionPerformed(evt);
-            }
-        });
-        jButton10.setBounds(303, 18, 20, 23);
-        jLayeredPane4.add(jButton10, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLabel20.setText(resourceMap.getString("jLabel20.text")); // NOI18N
-        jLabel20.setName("jLabel20"); // NOI18N
-        jLabel20.setBounds(10, 20, 80, 20);
-        jLayeredPane4.add(jLabel20, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
-        jLayeredPane4.setBounds(10, 260, 330, 140);
-        jLayeredPane1.add(jLayeredPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jButton1.setBounds(210, 410, 70, 30);
+        jLayeredPane1.add(jButton1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField1.setText(resourceMap.getString("jTextField1.text")); // NOI18N
         jTextField1.setName("jTextField1"); // NOI18N
@@ -823,33 +572,330 @@ public class IpkPackagerView extends FrameView {
         jButton2.setBounds(310, 400, 30, 30);
         jLayeredPane1.add(jButton2, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jTextField8.setBackground(resourceMap.getColor("jTextField8.background")); // NOI18N
-        jTextField8.setEditable(false);
-        jTextField8.setHorizontalAlignment(javax.swing.JTextField.CENTER);
-        jTextField8.setText(resourceMap.getString("jTextField8.text")); // NOI18N
-        jTextField8.setName("jTextField8"); // NOI18N
-        jTextField8.setBounds(10, 60, 110, 20);
-        jLayeredPane1.add(jTextField8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane2.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane2.border.titleFont"))); // NOI18N
+        jLayeredPane2.setName("jLayeredPane2"); // NOI18N
 
-        jButton8.setText(resourceMap.getString("jButton8.text")); // NOI18N
-        jButton8.setName("jButton8"); // NOI18N
-        jButton8.addActionListener(new java.awt.event.ActionListener() {
+        jLabel5.setText(resourceMap.getString("jLabel5.text")); // NOI18N
+        jLabel5.setName("jLabel5"); // NOI18N
+        jLabel5.setBounds(20, 50, 70, 20);
+        jLayeredPane2.add(jLabel5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField5.setText(resourceMap.getString("jTextField5.text")); // NOI18N
+        jTextField5.setName("jTextField5"); // NOI18N
+        jTextField5.setBounds(90, 50, 220, 20);
+        jLayeredPane2.add(jTextField5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel1.setText(resourceMap.getString("jLabel1.text")); // NOI18N
+        jLabel1.setName("jLabel1"); // NOI18N
+        jLabel1.setBounds(20, 110, 70, 20);
+        jLayeredPane2.add(jLabel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox5.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "all", "armv6  (Palm Pixi/Pixi Plus)", "armv7  (Palm Pre/Pre Plus)", "i686  (emulator)" }));
+        jComboBox5.setName("jComboBox5"); // NOI18N
+        jComboBox5.setBounds(90, 140, 220, 20);
+        jLayeredPane2.add(jComboBox5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField3.setText(resourceMap.getString("jTextField3.text")); // NOI18N
+        jTextField3.setName("jTextField3"); // NOI18N
+        jTextField3.setBounds(90, 20, 220, 20);
+        jLayeredPane2.add(jTextField3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel4.setText(resourceMap.getString("jLabel4.text")); // NOI18N
+        jLabel4.setName("jLabel4"); // NOI18N
+        jLabel4.setBounds(20, 20, 70, 20);
+        jLayeredPane2.add(jLabel4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField6.setText(resourceMap.getString("jTextField6.text")); // NOI18N
+        jTextField6.setName("jTextField6"); // NOI18N
+        jTextField6.setBounds(90, 80, 220, 20);
+        jLayeredPane2.add(jTextField6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel6.setText(resourceMap.getString("jLabel6.text")); // NOI18N
+        jLabel6.setName("jLabel6"); // NOI18N
+        jLabel6.setBounds(20, 80, 70, 20);
+        jLayeredPane2.add(jLabel6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel21.setText(resourceMap.getString("jLabel21.text")); // NOI18N
+        jLabel21.setName("jLabel21"); // NOI18N
+        jLabel21.setBounds(20, 140, 70, 20);
+        jLayeredPane2.add(jLabel21, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField7.setText(resourceMap.getString("jTextField7.text")); // NOI18N
+        jTextField7.setName("jTextField7"); // NOI18N
+        jTextField7.setBounds(90, 110, 220, 20);
+        jLayeredPane2.add(jTextField7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane2.setBounds(10, 90, 330, 170);
+        jLayeredPane1.add(jLayeredPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane3.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane3.border.titleFont"))); // NOI18N
+        jLayeredPane3.setName("jLayeredPane3"); // NOI18N
+
+        jLabel14.setText(resourceMap.getString("jLabel14.text")); // NOI18N
+        jLabel14.setName("jLabel14"); // NOI18N
+        jLabel14.setBounds(20, 300, 60, 20);
+        jLayeredPane3.add(jLabel14, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel18.setText(resourceMap.getString("jLabel18.text")); // NOI18N
+        jLabel18.setName("jLabel18"); // NOI18N
+        jLabel18.setBounds(20, 330, 70, 30);
+        jLayeredPane3.add(jLabel18, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox2.setName("jComboBox2"); // NOI18N
+        jComboBox2.setBounds(100, 340, 100, 20);
+        jLayeredPane3.add(jComboBox2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel10.setText(resourceMap.getString("jLabel10.text")); // NOI18N
+        jLabel10.setName("jLabel10"); // NOI18N
+        jLabel10.setBounds(20, 150, 80, 20);
+        jLayeredPane3.add(jLabel10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField4.setText(resourceMap.getString("jTextField4.text")); // NOI18N
+        jTextField4.setName("jTextField4"); // NOI18N
+        jTextField4.setBounds(100, 30, 300, 20);
+        jLayeredPane3.add(jTextField4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField10.setText(resourceMap.getString("jTextField10.text")); // NOI18N
+        jTextField10.setName("jTextField10"); // NOI18N
+        jTextField10.setBounds(280, 300, 120, 20);
+        jLayeredPane3.add(jTextField10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel12.setText(resourceMap.getString("jLabel12.text")); // NOI18N
+        jLabel12.setName("jLabel12"); // NOI18N
+        jLabel12.setBounds(20, 270, 60, 20);
+        jLayeredPane3.add(jLabel12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField12.setName("jTextField12"); // NOI18N
+        jTextField12.setBounds(280, 270, 120, 20);
+        jLayeredPane3.add(jTextField12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel11.setText(resourceMap.getString("jLabel11.text")); // NOI18N
+        jLabel11.setName("jLabel11"); // NOI18N
+        jLabel11.setBounds(20, 240, 60, 20);
+        jLayeredPane3.add(jLabel11, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel15.setText(resourceMap.getString("jLabel15.text")); // NOI18N
+        jLabel15.setName("jLabel15"); // NOI18N
+        jLabel15.setBounds(210, 330, 70, 30);
+        jLayeredPane3.add(jLabel15, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton4.setFont(resourceMap.getFont("jButton4.font")); // NOI18N
+        jButton4.setText(resourceMap.getString("jButton4.text")); // NOI18N
+        jButton4.setIconTextGap(0);
+        jButton4.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton4.setName("jButton4"); // NOI18N
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton8ActionPerformed(evt);
+                jButton4ActionPerformed(evt);
             }
         });
-        jButton8.setBounds(70, 410, 130, 30);
-        jLayeredPane1.add(jButton8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jButton4.setBounds(370, 90, 30, 22);
+        jLayeredPane3.add(jButton4, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jButton1.setText(resourceMap.getString("jButton1.text")); // NOI18N
-        jButton1.setName("jButton1"); // NOI18N
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        jComboBox4.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox4.setName("jComboBox4"); // NOI18N
+        jComboBox4.setBounds(100, 380, 100, 20);
+        jLayeredPane3.add(jComboBox4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton5.setFont(resourceMap.getFont("jButton5.font")); // NOI18N
+        jButton5.setText(resourceMap.getString("jButton5.text")); // NOI18N
+        jButton5.setIconTextGap(0);
+        jButton5.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton5.setName("jButton5"); // NOI18N
+        jButton5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                jButton5ActionPerformed(evt);
             }
         });
-        jButton1.setBounds(210, 410, 70, 30);
-        jLayeredPane1.add(jButton1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jButton5.setBounds(370, 60, 30, 22);
+        jLayeredPane3.add(jButton5, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel17.setText(resourceMap.getString("jLabel17.text")); // NOI18N
+        jLabel17.setName("jLabel17"); // NOI18N
+        jLabel17.setBounds(210, 300, 70, 20);
+        jLayeredPane3.add(jLabel17, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField11.setText(resourceMap.getString("jTextField11.text")); // NOI18N
+        jTextField11.setName("jTextField11"); // NOI18N
+        jTextField11.setBounds(100, 300, 100, 20);
+        jLayeredPane3.add(jTextField11, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel16.setText(resourceMap.getString("jLabel16.text")); // NOI18N
+        jLabel16.setName("jLabel16"); // NOI18N
+        jLabel16.setBounds(20, 370, 70, 30);
+        jLayeredPane3.add(jLabel16, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jScrollPane3.setName("jScrollPane3"); // NOI18N
+
+        jTextArea2.setColumns(20);
+        jTextArea2.setFont(resourceMap.getFont("jTextArea2.font")); // NOI18N
+        jTextArea2.setLineWrap(true);
+        jTextArea2.setRows(4);
+        jTextArea2.setWrapStyleWord(true);
+        jTextArea2.setName("jTextArea2"); // NOI18N
+        jTextArea2.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                jTextArea2KeyTyped(evt);
+            }
+        });
+        jScrollPane3.setViewportView(jTextArea2);
+
+        jScrollPane3.setBounds(100, 150, 300, 80);
+        jLayeredPane3.add(jScrollPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jScrollPane2.setName("jScrollPane2"); // NOI18N
+
+        jList1.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jList1.setName("jList1"); // NOI18N
+        jList1.setVisibleRowCount(4);
+        jScrollPane2.setViewportView(jList1);
+
+        jScrollPane2.setBounds(100, 60, 260, 70);
+        jLayeredPane3.add(jScrollPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
+        jComboBox3.setName("jComboBox3"); // NOI18N
+        jComboBox3.setBounds(280, 340, 120, 20);
+        jLayeredPane3.add(jComboBox3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel8.setText(resourceMap.getString("jLabel8.text")); // NOI18N
+        jLabel8.setName("jLabel8"); // NOI18N
+        jLabel8.setBounds(20, 30, 60, 20);
+        jLayeredPane3.add(jLabel8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Application", "Linux App", "Daemon", "Patch", "Plugin", "Service", "Theme" }));
+        jComboBox1.setName("jComboBox1"); // NOI18N
+        jComboBox1.setBounds(100, 270, 100, 20);
+        jLayeredPane3.add(jComboBox1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel13.setText(resourceMap.getString("jLabel13.text")); // NOI18N
+        jLabel13.setName("jLabel13"); // NOI18N
+        jLabel13.setBounds(210, 270, 70, 20);
+        jLayeredPane3.add(jLabel13, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField9.setText(resourceMap.getString("jTextField9.text")); // NOI18N
+        jTextField9.setName("jTextField9"); // NOI18N
+        jTextField9.setBounds(100, 240, 300, 20);
+        jLayeredPane3.add(jTextField9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel9.setText(resourceMap.getString("jLabel9.text")); // NOI18N
+        jLabel9.setName("jLabel9"); // NOI18N
+        jLabel9.setBounds(20, 60, 80, 30);
+        jLayeredPane3.add(jLabel9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane3.setBounds(360, 10, 420, 420);
+        jLayeredPane1.add(jLayeredPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane4.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane4.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane4.border.titleFont"))); // NOI18N
+        jLayeredPane4.setName("jLayeredPane4"); // NOI18N
+
+        jScrollPane4.setName("jScrollPane4"); // NOI18N
+
+        jList2.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jList2.setName("jList2"); // NOI18N
+        jList2.setVisibleRowCount(3);
+        jScrollPane4.setViewportView(jList2);
+
+        jScrollPane4.setBounds(90, 80, 190, 50);
+        jLayeredPane4.add(jScrollPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton6.setFont(resourceMap.getFont("jButton6.font")); // NOI18N
+        jButton6.setText(resourceMap.getString("jButton6.text")); // NOI18N
+        jButton6.setIconTextGap(0);
+        jButton6.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton6.setName("jButton6"); // NOI18N
+        jButton6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton6ActionPerformed(evt);
+            }
+        });
+        jButton6.setBounds(290, 80, 30, 22);
+        jLayeredPane4.add(jButton6, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField13.setText(resourceMap.getString("jTextField13.text")); // NOI18N
+        jTextField13.setName("jTextField13"); // NOI18N
+        jTextField13.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField13MousePressed(evt);
+            }
+        });
+        jTextField13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField13ActionPerformed(evt);
+            }
+        });
+        jTextField13.setBounds(90, 20, 210, 20);
+        jLayeredPane4.add(jTextField13, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton9.setText(resourceMap.getString("jButton9.text")); // NOI18N
+        jButton9.setIconTextGap(0);
+        jButton9.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton9.setName("jButton9"); // NOI18N
+        jButton9.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton9ActionPerformed(evt);
+            }
+        });
+        jButton9.setBounds(303, 48, 20, 23);
+        jLayeredPane4.add(jButton9, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton10.setText(resourceMap.getString("jButton10.text")); // NOI18N
+        jButton10.setIconTextGap(0);
+        jButton10.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton10.setName("jButton10"); // NOI18N
+        jButton10.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton10ActionPerformed(evt);
+            }
+        });
+        jButton10.setBounds(303, 18, 20, 23);
+        jLayeredPane4.add(jButton10, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton7.setFont(resourceMap.getFont("jButton7.font")); // NOI18N
+        jButton7.setText(resourceMap.getString("jButton7.text")); // NOI18N
+        jButton7.setIconTextGap(0);
+        jButton7.setMargin(new java.awt.Insets(-1, -1, 0, 0));
+        jButton7.setName("jButton7"); // NOI18N
+        jButton7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton7ActionPerformed(evt);
+            }
+        });
+        jButton7.setBounds(290, 105, 30, 22);
+        jLayeredPane4.add(jButton7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel19.setText(resourceMap.getString("jLabel19.text")); // NOI18N
+        jLabel19.setName("jLabel19"); // NOI18N
+        jLabel19.setBounds(10, 50, 80, 20);
+        jLayeredPane4.add(jLabel19, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel7.setText(resourceMap.getString("jLabel7.text")); // NOI18N
+        jLabel7.setName("jLabel7"); // NOI18N
+        jLabel7.setBounds(10, 80, 60, 20);
+        jLayeredPane4.add(jLabel7, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField14.setName("jTextField14"); // NOI18N
+        jTextField14.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField14MousePressed(evt);
+            }
+        });
+        jTextField14.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField14ActionPerformed(evt);
+            }
+        });
+        jTextField14.setBounds(90, 50, 210, 20);
+        jLayeredPane4.add(jTextField14, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel20.setText(resourceMap.getString("jLabel20.text")); // NOI18N
+        jLabel20.setName("jLabel20"); // NOI18N
+        jLabel20.setBounds(10, 20, 80, 20);
+        jLayeredPane4.add(jLabel20, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane4.setBounds(10, 260, 330, 140);
+        jLayeredPane1.add(jLayeredPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout mainPanelLayout = new javax.swing.GroupLayout(mainPanel);
         mainPanel.setLayout(mainPanelLayout);
@@ -910,6 +956,7 @@ public class IpkPackagerView extends FrameView {
             checkForControl(new File(folder, "CONTROL"));
             checkForControl(folder.getParentFile());
             checkForControl(new File(folder.getParentFile(), "CONTROL"));
+            resetCaretPositions();
         }
         t.schedule(new DelayedLoad(), 50);
     }//GEN-LAST:event_jTextField1MousePressed
@@ -987,7 +1034,7 @@ public class IpkPackagerView extends FrameView {
                     ib.setPackageName(title);
                     ib.setPackageID(jTextField5.getText().trim());
                     ib.setPackageVersion(jTextField6.getText().trim());
-                    ib.setPackageAuthor(jTextField7.getText().trim());
+                    setAuthor(ib);
                     ib.setArch(arch);
                     if(postinst!=null) {
                         swapEndlineCharacters(postinst);
@@ -1189,6 +1236,59 @@ public class IpkPackagerView extends FrameView {
 
         public String getDescription() {
             return "Ipk Files";
+        }
+    }
+
+    public class DocumentFilter extends PlainDocument {
+        public static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+        public static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        public static final String ALPHA = LOWERCASE + UPPERCASE;
+        public static final String NUMERIC = "0123456789";
+        public static final String PERIOD = ".";
+        public static final String FLOAT = NUMERIC + PERIOD;
+        public static final String SYMBOLS = PERIOD + "_-";
+        public static final String ALPHA_NUMERIC = ALPHA + NUMERIC + SYMBOLS;
+
+        protected String acceptedChars = null;
+        protected boolean negativeAccepted = false;
+
+        public DocumentFilter() {
+            this(ALPHA_NUMERIC);
+        }
+        public DocumentFilter(String acceptedchars) {
+            acceptedChars = acceptedchars;
+        }
+
+        public void setNegativeAccepted(boolean negativeaccepted) {
+            if (acceptedChars.equals(NUMERIC) ||
+                    acceptedChars.equals(FLOAT) ||
+                    acceptedChars.equals(ALPHA_NUMERIC)){
+                negativeAccepted = negativeaccepted;
+                acceptedChars += "-";
+            }
+        }
+
+        @Override
+        public void insertString(int offset, String  str, AttributeSet attr) throws BadLocationException {
+            if (str == null) return;
+
+            if (acceptedChars.equals(UPPERCASE))
+                str = str.toUpperCase();
+            else if (acceptedChars.equals(LOWERCASE))
+                str = str.toLowerCase();
+
+            for (int i=0; i < str.length(); i++) {
+                if (acceptedChars.indexOf(String.valueOf(str.charAt(i))) == -1)
+                    return;
+            }
+
+            if (negativeAccepted && str.indexOf("-") != -1) {
+                if (str.indexOf("-") != 0 || offset != 0 ) {
+                    return;
+                }
+            }
+
+            super.insertString(offset, str, attr);
         }
     }
 }
