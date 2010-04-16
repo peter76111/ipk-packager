@@ -948,14 +948,29 @@ public class IpkPackagerView extends FrameView {
         File f = loadFileChooser(true, null, null);
         if(f!=null) {
             folder = f;
-            File json = new File(folder, "appinfo.json");
-            if(json.exists()) {
-                loadFromJSON(json);
-            }
             checkForControl(folder);
             checkForControl(new File(folder, "CONTROL"));
             checkForControl(folder.getParentFile());
             checkForControl(new File(folder.getParentFile(), "CONTROL"));
+            File json = new File(folder, "appinfo.json");
+            if(json.exists()) {
+                loadFromJSON(json);
+            } else {
+                File appDir = new File(folder, "usr/palm/applications");
+                if(appDir.isDirectory()) {
+                    File[] list = appDir.listFiles();
+                    for(int i=0; i<list.length; i++) {
+                        if(list[i].isDirectory()) {
+                            json = new File(list[i], "appinfo.json");
+                            if(json.exists()) {
+                                loadFromJSON(json);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+            }
             resetCaretPositions();
         }
         t.schedule(new DelayedLoad(), 50);
