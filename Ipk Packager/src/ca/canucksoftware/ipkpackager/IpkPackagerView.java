@@ -194,11 +194,11 @@ public class IpkPackagerView extends FrameView {
             result = "Linux Daemon";
         } else if(jComboBox1.getSelectedIndex()==3) {
             result = "Patch";
-        } else if(jComboBox1.getSelectedIndex()==3) {
+        } else if(jComboBox1.getSelectedIndex()==4) {
             result = "Plugin";
-        } else if(jComboBox1.getSelectedIndex()==3) {
+        } else if(jComboBox1.getSelectedIndex()==5) {
             result = "Service";
-        } else if(jComboBox1.getSelectedIndex()==3) {
+        } else if(jComboBox1.getSelectedIndex()==6) {
             result = "Theme";
         }
         return result;
