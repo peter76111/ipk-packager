@@ -964,6 +964,7 @@ public class IpkPackagerView extends FrameView {
                             json = new File(list[i], "appinfo.json");
                             if(json.exists()) {
                                 loadFromJSON(json);
+                                jTextField2.setText("/");
                                 break;
                             }
                         }
