@@ -41,6 +41,8 @@ public class IpkPackagerView extends FrameView {
     private File folder;
     private File postinst;
     private File prerm;
+    private File pmPostInstall;
+    private File pmPreRemove;
     private Timer t;
     private ArrayList<String> depends;
     private ArrayList<String> ssURLs;
@@ -49,11 +51,17 @@ public class IpkPackagerView extends FrameView {
         super(app);
         initComponents();
         folder=null;
+        postinst = null;
+        prerm = null;
+        pmPostInstall = null;
+        pmPreRemove = null;
         isExpanded = false;
         depends = new ArrayList<String>();
         ssURLs = new ArrayList<String>();
         jTextField5.setDocument(new DocumentFilter(DocumentFilter.ALPHA_NUMERIC));
         jTextField6.setDocument(new DocumentFilter(DocumentFilter.FLOAT));
+        jTextField18.setDocument(new DocumentFilter(DocumentFilter.FLOAT));
+        jTextField19.setDocument(new DocumentFilter(DocumentFilter.FLOAT));
         t = new Timer();
         t.schedule(new ResizeScreen(), 50);
         t.schedule(new DelayedLoad(), 50);
@@ -450,6 +458,12 @@ public class IpkPackagerView extends FrameView {
         jScrollPane4 = new javax.swing.JScrollPane();
         jList2 = new javax.swing.JList();
         jButton7 = new javax.swing.JButton();
+        jLabel22 = new javax.swing.JLabel();
+        jTextField15 = new javax.swing.JTextField();
+        jButton11 = new javax.swing.JButton();
+        jLabel23 = new javax.swing.JLabel();
+        jTextField16 = new javax.swing.JTextField();
+        jButton12 = new javax.swing.JButton();
         jLayeredPane3 = new javax.swing.JLayeredPane();
         jLabel13 = new javax.swing.JLabel();
         jComboBox2 = new javax.swing.JComboBox();
@@ -477,6 +491,12 @@ public class IpkPackagerView extends FrameView {
         jLabel11 = new javax.swing.JLabel();
         jComboBox1 = new javax.swing.JComboBox();
         jLabel14 = new javax.swing.JLabel();
+        jLabel24 = new javax.swing.JLabel();
+        jTextField17 = new javax.swing.JTextField();
+        jLabel25 = new javax.swing.JLabel();
+        jTextField18 = new javax.swing.JTextField();
+        jLabel26 = new javax.swing.JLabel();
+        jTextField19 = new javax.swing.JTextField();
         jTextField2 = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
         jTextField8 = new javax.swing.JTextField();
@@ -497,12 +517,12 @@ public class IpkPackagerView extends FrameView {
 
         jTextField5.setText(resourceMap.getString("jTextField5.text")); // NOI18N
         jTextField5.setName("jTextField5"); // NOI18N
-        jTextField5.setBounds(90, 50, 220, 20);
+        jTextField5.setBounds(90, 50, 220, -1);
         jLayeredPane2.add(jTextField5, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField7.setText(resourceMap.getString("jTextField7.text")); // NOI18N
         jTextField7.setName("jTextField7"); // NOI18N
-        jTextField7.setBounds(90, 110, 220, 20);
+        jTextField7.setBounds(90, 110, 220, -1);
         jLayeredPane2.add(jTextField7, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel4.setText(resourceMap.getString("jLabel4.text")); // NOI18N
@@ -515,9 +535,9 @@ public class IpkPackagerView extends FrameView {
         jLabel5.setBounds(20, 50, 70, 20);
         jLayeredPane2.add(jLabel5, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jComboBox5.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "all", "armv6  (Palm Pixi/Pixi Plus)", "armv7  (Palm Pre/Pre Plus)", "i686  (emulator)" }));
+        jComboBox5.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "all", "armv6  (Pixi/Pixi Plus)", "armv7  (Pre/Pre Plus/Pre 2)", "i686  (Emulator)" }));
         jComboBox5.setName("jComboBox5"); // NOI18N
-        jComboBox5.setBounds(90, 140, 220, 20);
+        jComboBox5.setBounds(90, 140, 220, -1);
         jLayeredPane2.add(jComboBox5, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel1.setText(resourceMap.getString("jLabel1.text")); // NOI18N
@@ -527,7 +547,7 @@ public class IpkPackagerView extends FrameView {
 
         jTextField6.setText(resourceMap.getString("jTextField6.text")); // NOI18N
         jTextField6.setName("jTextField6"); // NOI18N
-        jTextField6.setBounds(90, 80, 220, 20);
+        jTextField6.setBounds(90, 80, 220, -1);
         jLayeredPane2.add(jTextField6, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel6.setText(resourceMap.getString("jLabel6.text")); // NOI18N
@@ -542,7 +562,7 @@ public class IpkPackagerView extends FrameView {
 
         jTextField3.setText(resourceMap.getString("jTextField3.text")); // NOI18N
         jTextField3.setName("jTextField3"); // NOI18N
-        jTextField3.setBounds(90, 20, 220, 20);
+        jTextField3.setBounds(90, 20, 220, -1);
         jLayeredPane2.add(jTextField3, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLayeredPane2.setBounds(10, 90, 330, 170);
@@ -553,12 +573,12 @@ public class IpkPackagerView extends FrameView {
 
         jLabel7.setText(resourceMap.getString("jLabel7.text")); // NOI18N
         jLabel7.setName("jLabel7"); // NOI18N
-        jLabel7.setBounds(10, 80, 60, 20);
+        jLabel7.setBounds(10, 20, 60, 20);
         jLayeredPane4.add(jLabel7, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel19.setText(resourceMap.getString("jLabel19.text")); // NOI18N
         jLabel19.setName("jLabel19"); // NOI18N
-        jLabel19.setBounds(10, 50, 80, 20);
+        jLabel19.setBounds(10, 110, 80, 20);
         jLayeredPane4.add(jLabel19, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField14.setName("jTextField14"); // NOI18N
@@ -572,7 +592,7 @@ public class IpkPackagerView extends FrameView {
                 jTextField14ActionPerformed(evt);
             }
         });
-        jTextField14.setBounds(90, 50, 210, 20);
+        jTextField14.setBounds(90, 110, 210, -1);
         jLayeredPane4.add(jTextField14, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField13.setText(resourceMap.getString("jTextField13.text")); // NOI18N
@@ -587,7 +607,7 @@ public class IpkPackagerView extends FrameView {
                 jTextField13ActionPerformed(evt);
             }
         });
-        jTextField13.setBounds(90, 20, 210, 20);
+        jTextField13.setBounds(90, 80, 210, -1);
         jLayeredPane4.add(jTextField13, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton9.setText(resourceMap.getString("jButton9.text")); // NOI18N
@@ -599,12 +619,12 @@ public class IpkPackagerView extends FrameView {
                 jButton9ActionPerformed(evt);
             }
         });
-        jButton9.setBounds(303, 48, 20, 23);
+        jButton9.setBounds(303, 108, 20, -1);
         jLayeredPane4.add(jButton9, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel20.setText(resourceMap.getString("jLabel20.text")); // NOI18N
         jLabel20.setName("jLabel20"); // NOI18N
-        jLabel20.setBounds(10, 20, 80, 20);
+        jLabel20.setBounds(10, 80, 80, 20);
         jLayeredPane4.add(jLabel20, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton10.setText(resourceMap.getString("jButton10.text")); // NOI18N
@@ -616,7 +636,7 @@ public class IpkPackagerView extends FrameView {
                 jButton10ActionPerformed(evt);
             }
         });
-        jButton10.setBounds(303, 18, 20, 23);
+        jButton10.setBounds(303, 78, 20, -1);
         jLayeredPane4.add(jButton10, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton6.setFont(resourceMap.getFont("jButton6.font")); // NOI18N
@@ -629,7 +649,7 @@ public class IpkPackagerView extends FrameView {
                 jButton6ActionPerformed(evt);
             }
         });
-        jButton6.setBounds(290, 80, 30, 22);
+        jButton6.setBounds(290, 20, 30, 22);
         jLayeredPane4.add(jButton6, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jScrollPane4.setName("jScrollPane4"); // NOI18N
@@ -639,7 +659,7 @@ public class IpkPackagerView extends FrameView {
         jList2.setVisibleRowCount(3);
         jScrollPane4.setViewportView(jList2);
 
-        jScrollPane4.setBounds(90, 80, 190, 50);
+        jScrollPane4.setBounds(90, 20, 190, 50);
         jLayeredPane4.add(jScrollPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton7.setFont(resourceMap.getFont("jButton7.font")); // NOI18N
@@ -652,10 +672,72 @@ public class IpkPackagerView extends FrameView {
                 jButton7ActionPerformed(evt);
             }
         });
-        jButton7.setBounds(290, 105, 30, 22);
+        jButton7.setBounds(290, 50, 30, 22);
         jLayeredPane4.add(jButton7, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jLayeredPane4.setBounds(10, 260, 330, 140);
+        jLabel22.setText(resourceMap.getString("jLabel22.text")); // NOI18N
+        jLabel22.setName("jLabel22"); // NOI18N
+        jLabel22.setBounds(10, 140, 80, 20);
+        jLayeredPane4.add(jLabel22, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField15.setName("jTextField15"); // NOI18N
+        jTextField15.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField15MousePressed(evt);
+            }
+        });
+        jTextField15.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField15ActionPerformed(evt);
+            }
+        });
+        jTextField15.setBounds(90, 140, 210, -1);
+        jLayeredPane4.add(jTextField15, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton11.setText(resourceMap.getString("jButton11.text")); // NOI18N
+        jButton11.setIconTextGap(0);
+        jButton11.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton11.setName("jButton11"); // NOI18N
+        jButton11.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton11ActionPerformed(evt);
+            }
+        });
+        jButton11.setBounds(303, 138, 20, -1);
+        jLayeredPane4.add(jButton11, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel23.setText(resourceMap.getString("jLabel23.text")); // NOI18N
+        jLabel23.setName("jLabel23"); // NOI18N
+        jLabel23.setBounds(10, 170, 80, 20);
+        jLayeredPane4.add(jLabel23, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField16.setName("jTextField16"); // NOI18N
+        jTextField16.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                jTextField16MousePressed(evt);
+            }
+        });
+        jTextField16.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField16ActionPerformed(evt);
+            }
+        });
+        jTextField16.setBounds(90, 170, 210, -1);
+        jLayeredPane4.add(jTextField16, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jButton12.setText(resourceMap.getString("jButton12.text")); // NOI18N
+        jButton12.setIconTextGap(0);
+        jButton12.setMargin(new java.awt.Insets(2, 2, 2, 2));
+        jButton12.setName("jButton12"); // NOI18N
+        jButton12.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton12ActionPerformed(evt);
+            }
+        });
+        jButton12.setBounds(303, 168, 20, -1);
+        jLayeredPane4.add(jButton12, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane4.setBounds(10, 260, 330, 200);
         jLayeredPane1.add(jLayeredPane4, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLayeredPane3.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), resourceMap.getString("jLayeredPane3.border.title"), javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, resourceMap.getFont("jLayeredPane3.border.titleFont"))); // NOI18N
@@ -692,7 +774,7 @@ public class IpkPackagerView extends FrameView {
 
         jTextField10.setText(resourceMap.getString("jTextField10.text")); // NOI18N
         jTextField10.setName("jTextField10"); // NOI18N
-        jTextField10.setBounds(280, 300, 120, 20);
+        jTextField10.setBounds(280, 380, 120, 20);
         jLayeredPane3.add(jTextField10, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jComboBox4.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None", "RestartJava", "RestartLuna", "RestartDevice" }));
@@ -730,7 +812,7 @@ public class IpkPackagerView extends FrameView {
 
         jLabel17.setText(resourceMap.getString("jLabel17.text")); // NOI18N
         jLabel17.setName("jLabel17"); // NOI18N
-        jLabel17.setBounds(210, 300, 70, 20);
+        jLabel17.setBounds(210, 380, 70, 20);
         jLayeredPane3.add(jLabel17, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel16.setText(resourceMap.getString("jLabel16.text")); // NOI18N
@@ -814,7 +896,34 @@ public class IpkPackagerView extends FrameView {
         jLabel14.setBounds(20, 300, 60, 20);
         jLayeredPane3.add(jLabel14, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
-        jLayeredPane3.setBounds(360, 10, 420, 420);
+        jLabel24.setText(resourceMap.getString("jLabel24.text")); // NOI18N
+        jLabel24.setName("jLabel24"); // NOI18N
+        jLabel24.setBounds(210, 300, 70, 20);
+        jLayeredPane3.add(jLabel24, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField17.setName("jTextField17"); // NOI18N
+        jTextField17.setBounds(280, 300, 120, 20);
+        jLayeredPane3.add(jTextField17, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel25.setText(resourceMap.getString("jLabel25.text")); // NOI18N
+        jLabel25.setName("jLabel25"); // NOI18N
+        jLabel25.setBounds(20, 420, 80, 40);
+        jLayeredPane3.add(jLabel25, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField18.setName("jTextField18"); // NOI18N
+        jTextField18.setBounds(100, 430, 100, 20);
+        jLayeredPane3.add(jTextField18, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLabel26.setText(resourceMap.getString("jLabel26.text")); // NOI18N
+        jLabel26.setName("jLabel26"); // NOI18N
+        jLabel26.setBounds(210, 420, 70, 40);
+        jLayeredPane3.add(jLabel26, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jTextField19.setName("jTextField19"); // NOI18N
+        jTextField19.setBounds(280, 430, 120, 20);
+        jLayeredPane3.add(jTextField19, javax.swing.JLayeredPane.DEFAULT_LAYER);
+
+        jLayeredPane3.setBounds(360, 10, 420, 490);
         jLayeredPane1.add(jLayeredPane3, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField2.setText(resourceMap.getString("jTextField2.text")); // NOI18N
@@ -829,7 +938,7 @@ public class IpkPackagerView extends FrameView {
                 jButton1ActionPerformed(evt);
             }
         });
-        jButton1.setBounds(210, 410, 70, 30);
+        jButton1.setBounds(210, 470, 70, 30);
         jLayeredPane1.add(jButton1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jTextField8.setBackground(resourceMap.getColor("jTextField8.background")); // NOI18N
@@ -837,7 +946,7 @@ public class IpkPackagerView extends FrameView {
         jTextField8.setHorizontalAlignment(javax.swing.JTextField.CENTER);
         jTextField8.setText(resourceMap.getString("jTextField8.text")); // NOI18N
         jTextField8.setName("jTextField8"); // NOI18N
-        jTextField8.setBounds(10, 60, 110, 20);
+        jTextField8.setBounds(10, 60, 110, -1);
         jLayeredPane1.add(jTextField8, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel2.setFont(resourceMap.getFont("jLabel2.font")); // NOI18N
@@ -853,7 +962,7 @@ public class IpkPackagerView extends FrameView {
                 jTextField1MousePressed(evt);
             }
         });
-        jTextField1.setBounds(70, 10, 240, 20);
+        jTextField1.setBounds(70, 10, 240, -1);
         jLayeredPane1.add(jTextField1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton3.setText(resourceMap.getString("jButton3.text")); // NOI18N
@@ -865,7 +974,7 @@ public class IpkPackagerView extends FrameView {
                 jButton3ActionPerformed(evt);
             }
         });
-        jButton3.setBounds(320, 8, 20, 23);
+        jButton3.setBounds(320, 8, 20, -1);
         jLayeredPane1.add(jButton3, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jLabel3.setFont(resourceMap.getFont("jLabel3.font")); // NOI18N
@@ -884,7 +993,7 @@ public class IpkPackagerView extends FrameView {
                 jButton2ActionPerformed(evt);
             }
         });
-        jButton2.setBounds(310, 400, 30, 30);
+        jButton2.setBounds(310, 460, 30, 30);
         jLayeredPane1.add(jButton2, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         jButton8.setText(resourceMap.getString("jButton8.text")); // NOI18N
@@ -894,7 +1003,7 @@ public class IpkPackagerView extends FrameView {
                 jButton8ActionPerformed(evt);
             }
         });
-        jButton8.setBounds(70, 410, 130, 30);
+        jButton8.setBounds(70, 470, 130, 30);
         jLayeredPane1.add(jButton8, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout mainPanelLayout = new javax.swing.GroupLayout(mainPanel);
@@ -905,7 +1014,7 @@ public class IpkPackagerView extends FrameView {
         );
         mainPanelLayout.setVerticalGroup(
             mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 449, Short.MAX_VALUE)
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 512, Short.MAX_VALUE)
         );
 
         setComponent(mainPanel);
@@ -915,6 +1024,8 @@ public class IpkPackagerView extends FrameView {
         folder = null;
         postinst = null;
         prerm = null;
+        pmPostInstall = null;
+        pmPreRemove = null;
         depends.clear();
         ssURLs.clear();
         
@@ -927,6 +1038,8 @@ public class IpkPackagerView extends FrameView {
         jComboBox5.setSelectedIndex(0);
         jTextField13.setText("");
         jTextField14.setText("");
+        jTextField15.setText("");
+        jTextField16.setText("");
         jList2.setListData(depends.toArray());
 
         jTextField4.setText("");
@@ -940,6 +1053,9 @@ public class IpkPackagerView extends FrameView {
         jComboBox2.setSelectedIndex(0);
         jComboBox3.setSelectedIndex(0);
         jComboBox4.setSelectedIndex(0);
+        jTextField17.setText("");
+        jTextField18.setText("");
+        jTextField19.setText("");
 
         t.schedule(new DelayedLoad(), 50);
     }//GEN-LAST:event_jButton1ActionPerformed
@@ -1060,6 +1176,14 @@ public class IpkPackagerView extends FrameView {
                         swapEndlineCharacters(prerm);
                         ib.setPrerm(prerm);
                     }
+                    if(pmPostInstall!=null) {
+                        swapEndlineCharacters(pmPostInstall);
+                        ib.setPalmPostinst(pmPostInstall);
+                    }
+                    if(pmPreRemove!=null) {
+                        swapEndlineCharacters(pmPreRemove);
+                        ib.setPalmPrerm(pmPreRemove);
+                    }
                     if(depends.size()>0) {
                         ib.setDepends(depends.toArray(new String[depends.size()]));
                     }
@@ -1096,9 +1220,9 @@ public class IpkPackagerView extends FrameView {
                         if(license.length()>0) {
                             source.put("License", license);
                         }
-                        String srcURL = jTextField10.getText().trim();
-                        if(srcURL.length()>0) {
-                            source.put("Location", srcURL);
+                        String locURL = jTextField10.getText().trim();
+                        if(locURL.length()>0) {
+                            source.put("Location", locURL);
                         }
                         String piFlag = getFlag(jComboBox2);
                         if(piFlag!=null) {
@@ -1111,6 +1235,18 @@ public class IpkPackagerView extends FrameView {
                         String prFlag = getFlag(jComboBox4);
                         if(prFlag!=null) {
                             source.put("PostRemoveFlags", prFlag);
+                        }
+                        String srcURL = jTextField17.getText().trim();
+                        if(srcURL.length()>0) {
+                            source.put("Source", srcURL);
+                        }
+                        String minVer = jTextField18.getText().trim();
+                        if(minVer.length()>0) {
+                            source.put("MinWebOSVersion", minVer);
+                        }
+                        String maxVer = jTextField19.getText().trim();
+                        if(maxVer.length()>0) {
+                            source.put("MaxWebOSVersion", maxVer);
                         }
                         ib.setPackageSource(source);
                     }
@@ -1164,9 +1300,46 @@ public class IpkPackagerView extends FrameView {
         t.schedule(new DelayedLoad(), 50);
     }//GEN-LAST:event_jTextField14MousePressed
 
+    private void jTextField15MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField15MousePressed
+        pmPostInstall = loadFileChooser(false, null, null);
+        if(pmPostInstall!=null) {
+            jTextField15.setText(pmPostInstall.getAbsolutePath());
+        } else {
+            jTextField15.setText("");
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jTextField15MousePressed
+
+    private void jTextField15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField15ActionPerformed
+    }//GEN-LAST:event_jTextField15ActionPerformed
+
+    private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
+        jTextField15MousePressed(null);
+    }//GEN-LAST:event_jButton11ActionPerformed
+
+    private void jTextField16MousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTextField16MousePressed
+        pmPreRemove = loadFileChooser(false, null, null);
+        if(pmPreRemove!=null) {
+            jTextField16.setText(pmPreRemove.getAbsolutePath());
+        } else {
+            jTextField16.setText("");
+        }
+        t.schedule(new DelayedLoad(), 50);
+    }//GEN-LAST:event_jTextField16MousePressed
+
+    private void jTextField16ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField16ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextField16ActionPerformed
+
+    private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
+        jTextField16MousePressed(null);
+    }//GEN-LAST:event_jButton12ActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton10;
+    private javax.swing.JButton jButton11;
+    private javax.swing.JButton jButton12;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
@@ -1194,6 +1367,11 @@ public class IpkPackagerView extends FrameView {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
+    private javax.swing.JLabel jLabel22;
+    private javax.swing.JLabel jLabel23;
+    private javax.swing.JLabel jLabel24;
+    private javax.swing.JLabel jLabel25;
+    private javax.swing.JLabel jLabel26;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
@@ -1217,6 +1395,11 @@ public class IpkPackagerView extends FrameView {
     private javax.swing.JTextField jTextField12;
     private javax.swing.JTextField jTextField13;
     private javax.swing.JTextField jTextField14;
+    private javax.swing.JTextField jTextField15;
+    private javax.swing.JTextField jTextField16;
+    private javax.swing.JTextField jTextField17;
+    private javax.swing.JTextField jTextField18;
+    private javax.swing.JTextField jTextField19;
     private javax.swing.JTextField jTextField2;
     private javax.swing.JTextField jTextField3;
     private javax.swing.JTextField jTextField4;
